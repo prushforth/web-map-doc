@@ -277,6 +277,20 @@
         // must have leaflet-pane class because of new/changed rule in leaflet.css
         // info: https://github.com/Leaflet/Leaflet/pull/4597 
         L.DomUtil.addClass(this._container,'leaflet-pane mapml-vector-container');
+
+        let anim = L.DomUtil.create("style", "mapml-feature-animation", this._container);
+        anim.innerHTML = `@keyframes pathSelect {
+        0% {stroke: white;}
+        50% {stroke: black;}
+      }
+      
+      .mapml-path-selected {
+        animation-name: pathSelect;
+        animation-duration: 1s;
+        stroke-width: 5;
+        stroke: black;
+      }`;
+
         L.setOptions(this.options.renderer, {pane: this._container});
         this._layers = {};
         if(this.options.query){
@@ -313,18 +327,19 @@
       },
 
       onRemove: function(map){
-        L.FeatureGroup.prototype.onRemove.call(this, map);
         if(this._mapmlFeatures){
           map.off("featurepagination", this.showPaginationFeature, this);
           delete this._mapmlFeatures;
+          L.DomUtil.remove(this._container);
         }
-        L.DomUtil.remove(this._container);
+        L.FeatureGroup.prototype.onRemove.call(this, map);
       },
 
       getEvents: function(){
         if(this._staticFeature){
           return {
             'moveend':this._handleMoveEnd,
+            'zoomend' : this._handleZoomEnd,
           };
         }
         return {
@@ -341,11 +356,21 @@
               } else {
                 path._path.removeAttribute("tabindex");
               }
-              if(path._path.childElementCount === 0) {
-                let title = document.createElement("title");
-                title.innerText = "Feature";
-                path._path.appendChild(title);
-              }
+              path._path.setAttribute("aria-label", path.accessibleTitle);
+              path._path.setAttribute("aria-expanded", "false");
+              /* jshint ignore:start */
+              L.DomEvent.on(path._path, "keyup keydown", (e)=>{
+                if((e.keyCode === 9 || e.keyCode === 16 || e.keyCode === 13) && e.type === "keyup"){
+                  path._path.classList.add("mapml-path-selected");
+                  path.openTooltip();
+                } else {
+                  path._path.classList.remove("mapml-path-selected");
+                  path.closeTooltip(); 
+                }
+              });
+              path._path.classList.remove("mapml-path-selected");
+              if(path.isTooltipOpen())path.closeTooltip(); 
+              /* jshint ignore:end */
             }
           }
         }
@@ -362,21 +387,41 @@
       },
 
       _previousFeature: function(e){
-        this._map.closePopup();
-        if(this._source._path.previousSibling){
-          this._source._path.previousSibling.focus();
-        } else {
-          this._source._path.focus();
+        let path = this._source._path.previousSibling;
+        if(!path){
+          let currentIndex = this._source._path.closest("div.mapml-layer").style.zIndex;
+          let overlays = this._map.getPane("overlayPane").children;
+          for(let i = overlays.length - 1; i >= 0; i--){
+            let layer = overlays[i];
+            if(layer.style.zIndex >= currentIndex) continue;
+            path = layer.querySelector("path");
+            if(path){
+              path = path.parentNode.lastChild;
+              break;
+            }
+          }
+          if (!path) path = this._source._path; 
         }
+        path.focus();
+        this._map._targets[path._leaflet_id].openTooltip();
+        this._map.closePopup();
       },
 
       _nextFeature: function(e){
-        this._map.closePopup();
-        if(this._source._path.nextSibling){
-          this._source._path.nextSibling.focus();
-        } else {
-          this._source._path.focus();
+        let path = this._source._path.nextSibling;
+        if(!path){
+          let currentIndex = this._source._path.closest("div.mapml-layer").style.zIndex;
+
+          for(let layer of this._map.getPane("overlayPane").children){
+            if(layer.style.zIndex <= currentIndex) continue;
+            path = layer.querySelector("path");
+            if(path)break;
+          }
+          if (!path) path = this._source._path; 
         }
+        path.focus();
+        this._map._targets[path._leaflet_id].openTooltip();
+        this._map.closePopup();
       },
 
       _getNativeVariables: function(mapml){
@@ -388,21 +433,25 @@
       },
 
       _handleMoveEnd : function(){
-        let mapZoom = this._map.getZoom();
-        if(mapZoom > this.zoomBounds.maxZoom || mapZoom < this.zoomBounds.minZoom){
-          this.clearLayers();
-          this.isVisible = false;
-          return;
-        }
-        let clampZoom = this._clampZoom(mapZoom);
-        this._resetFeatures(clampZoom);
-        this.isVisible = this._layers && this.layerBounds && 
+        let mapZoom = this._map.getZoom(),
+            withinZoom = mapZoom <= this.zoomBounds.maxZoom && mapZoom >= this.zoomBounds.minZoom;   
+        this.isVisible = withinZoom && this._layers && this.layerBounds && 
                           this.layerBounds.overlaps(
                             M.pixelToPCRSBounds(
                               this._map.getPixelBounds(),
                               mapZoom,this._map.options.projection));
         this._removeCSS();
         this._updateTabIndex();
+      },
+
+      _handleZoomEnd: function(e){
+        let mapZoom = this._map.getZoom();
+        if(mapZoom > this.zoomBounds.maxZoom || mapZoom < this.zoomBounds.minZoom){
+          this.clearLayers();
+          return;
+        }
+        let clampZoom = this._clampZoom(mapZoom);
+        this._resetFeatures(clampZoom);
       },
 
       //sets default if any are missing, better to only replace ones that are missing
@@ -546,7 +595,16 @@
           this.resetStyle(layer);
 
           if (options.onEachFeature) {
-           options.onEachFeature(layer.properties, layer);
+            layer.accessibleTitle = mapml.querySelector("featurecaption");
+            layer.accessibleTitle = layer.accessibleTitle ? layer.accessibleTitle.innerHTML : "Feature"; 
+            options.onEachFeature(layer.properties, layer);
+            layer.bindTooltip(layer.accessibleTitle, { interactive:true });
+            if(layer._events){
+                layer._events.keypress.push({
+                  "ctx": layer,
+                  "fn": this._onSpacePress,
+                });
+              }
           }
           if(this._staticFeature){
             let featureZoom = mapml.getAttribute('zoom') || nativeZoom;
@@ -588,7 +646,13 @@
       _removeCSS: function(){
         let toDelete = this._container.querySelectorAll("link[rel=stylesheet],style");
         for(let i = 0; i < toDelete.length;i++){
+          if(toDelete[i].classList.contains("mapml-feature-animation")) continue;
           this._container.removeChild(toDelete[i]);
+        }
+      },
+      _onSpacePress: function(e){
+        if(e.originalEvent.keyCode === 32){
+          this._openPopup(e);
         }
       },
   	 geometryToLayer: function (mapml, pointToLayer, coordsToLatLng, vectorOptions, nativeCS, zoom) {
@@ -596,16 +660,6 @@
           latlng, latlngs, coordinates, member, members, linestrings;
 
       coordsToLatLng = coordsToLatLng || this.coordsToLatLng;
-      var pointOptions = {  opacity: vectorOptions.opacity ? vectorOptions.opacity : null,
-                            icon: L.icon(
-                              { iconUrl: vectorOptions.imagePath+"marker-icon.png",
-                                iconRetinaUrl: vectorOptions.imagePath+"marker-icon-2x.png",
-                                shadowUrl: vectorOptions.imagePath+"marker-shadow.png",
-                                iconSize: [25, 41],
-                                iconAnchor: [12, 41],
-                                popupAnchor: [1, -34],
-                                shadowSize: [41, 41]
-                              })};
       
       var cs = geometry.getAttribute("cs") || nativeCS;
 
@@ -614,8 +668,7 @@
           coordinates = [];
           geometry.getElementsByTagName('coordinates')[0].textContent.split(/\s+/gim).forEach(M.parseNumber,coordinates);
           latlng = coordsToLatLng(coordinates, cs, zoom, this.options.projection);
-          return pointToLayer ? pointToLayer(mapml, latlng) : 
-                                      new L.Marker(latlng, pointOptions);
+          return pointToLayer ? pointToLayer(mapml, latlng) : M.svgMarker(latlng, vectorOptions);
 
         case 'MULTIPOINT':
           coordinates = [];
@@ -623,7 +676,7 @@
           latlngs = this.coordsToLatLngs(coordinates, 0, coordsToLatLng, cs, zoom);
           var points = new Array(latlngs.length);
           for(member=0;member<points.length;member++) {
-            points[member] = new L.Marker(latlngs[member],pointOptions);
+            points[member] = M.svgMarker(latlngs[member], vectorOptions);
           }
           return new L.featureGroup(points);
         case 'LINESTRING':
@@ -2200,7 +2253,7 @@
           _reset: function () {
   		var image = this._image,
   		    location = this._location,
-                      size = this._size;
+                      size = this._size;
 
                   // TBD use the angle to establish the image rotation in CSS
 
@@ -2332,7 +2385,7 @@
                     var c = document.createElement('div');
                     c.classList.add("mapml-popup-content");
                     c.insertAdjacentHTML('afterbegin', properties.innerHTML);
-                    geometry.bindPopup(c, {autoPan:false, closeButton: false, minWidth: 108});
+                    geometry.bindPopup(c, {autoClose: false, minWidth: 108});
                   }
                 }
               });
@@ -2354,6 +2407,7 @@
                     pane: this._container,
                     opacity: this.options.opacity,
                     imagePath: M.detectImagePath(this._map.getContainer()),
+                    projection:map.options.projection,
                     // each owned child layer gets a reference to the root layer
                     _leafletLayer: this,
                     onEachFeature: function(properties, geometry) {
@@ -2362,7 +2416,7 @@
                         var c = document.createElement('div');
                         c.classList.add("mapml-popup-content");
                         c.insertAdjacentHTML('afterbegin', properties.innerHTML);
-                        geometry.bindPopup(c, {autoPan:false, closeButton: false, minWidth: 108});
+                        geometry.bindPopup(c, {autoClose: false, minWidth: 108});
                       }
                     }
                   }).addTo(map);
@@ -2533,6 +2587,7 @@
           if (this._templatedLayer) {
               map.removeLayer(this._templatedLayer);
           }
+          map.fire("checkdisabled");
           map.off("popupopen", this._attachSkipButtons);
       },
       getZoomBounds: function () {
@@ -2725,11 +2780,28 @@
           name = document.createElement('span'),
           details = document.createElement('details'),
           summary = document.createElement('summary'),
+          summaryContainer = document.createElement('div'),
           opacity = document.createElement('input'),
           opacityControl = document.createElement('details'),
           opacityControlSummary = document.createElement('summary'),
           opacityControlSummaryLabel = document.createElement('label'),
           mapEl = this._layerEl.parentNode;
+
+          summary.style.display = 'flex';
+          summary.style.alignItems = 'center';
+          summaryContainer.classList.add('mapml-control-summary-container');
+
+          let removeButton = document.createElement('a');
+          removeButton.href = '#';
+          removeButton.role = 'button';
+          removeButton.title = 'Remove Layer';
+          removeButton.innerHTML = "<span aria-hidden='true'>&#10006;</span>";
+          removeButton.classList.add('mapml-layer-remove-button');
+          L.DomEvent.disableClickPropagation(removeButton);
+          L.DomEvent.on(removeButton, 'click', L.DomEvent.stop);
+          L.DomEvent.on(removeButton, 'click', (e)=>{
+            mapEl.removeChild(e.target.closest("fieldset").querySelector("span").layer._layerEl);
+          }, this);
 
           input.defaultChecked = this._map ? true: false;
           input.type = 'checkbox';
@@ -2778,7 +2850,7 @@
               // Fixes flickering by only moving element when there is enough space
               let offset = moveEvent.clientY - yPos;
               moving = Math.abs(offset) > 5 || moving;
-              if(controls && !moving || 
+              if( (controls && !moving) || (controls && controls.childElementCount <= 1) || 
                   controls.getBoundingClientRect().top > control.getBoundingClientRect().bottom || 
                   controls.getBoundingClientRect().bottom < control.getBoundingClientRect().top){
                     return;
@@ -2834,7 +2906,9 @@
 
           fieldset.appendChild(details);
           details.appendChild(summary);
-          summary.appendChild(label);
+          summaryContainer.appendChild(label);
+          summaryContainer.appendChild(removeButton);
+          summary.appendChild(summaryContainer);
           details.appendChild(opacityControl);
 
           if (this._styles) {
@@ -3399,8 +3473,7 @@
             content = popup._container.getElementsByClassName("mapml-popup-content")[0];
 
         content.setAttribute("tabindex", "-1");
-        content.focus();
-        popup._count = 0;
+        popup._count = 0; // used for feature pagination
 
         if(popup._source._eventParents){ // check if the popup is for a feature or query
           layer = popup._source._eventParents[Object.keys(popup._source._eventParents)[0]]; // get first parent of feature, there should only be one
@@ -3421,7 +3494,7 @@
         mapFocusButton.href = '#';
         mapFocusButton.role = "button";
         mapFocusButton.title = "Focus Map";
-        mapFocusButton.innerHTML = '|&#10094;';
+        mapFocusButton.innerHTML = "<span aria-hidden='true'>|&#10094;</span>";
         L.DomEvent.disableClickPropagation(mapFocusButton);
         L.DomEvent.on(mapFocusButton, 'click', L.DomEvent.stop);
         L.DomEvent.on(mapFocusButton, 'click', (e)=>{
@@ -3434,7 +3507,7 @@
         previousButton.href = '#';
         previousButton.role = "button";
         previousButton.title = "Previous Feature";
-        previousButton.innerHTML = "&#10094;";
+        previousButton.innerHTML = "<span aria-hidden='true'>&#10094;</span>";
         L.DomEvent.disableClickPropagation(previousButton);
         L.DomEvent.on(previousButton, 'click', L.DomEvent.stop);
         L.DomEvent.on(previousButton, 'click', layer._previousFeature, popup);
@@ -3454,7 +3527,7 @@
         nextButton.href = '#';
         nextButton.role = "button";
         nextButton.title = "Next Feature";
-        nextButton.innerHTML = "&#10095;";
+        nextButton.innerHTML = "<span aria-hidden='true'>&#10095;</span>";
         L.DomEvent.disableClickPropagation(nextButton);
         L.DomEvent.on(nextButton, 'click', L.DomEvent.stop);
         L.DomEvent.on(nextButton, 'click', layer._nextFeature, popup);
@@ -3464,12 +3537,12 @@
         controlFocusButton.href = '#';
         controlFocusButton.role = "button";
         controlFocusButton.title = "Focus Controls";
-        controlFocusButton.innerHTML = '&#10095;|';
+        controlFocusButton.innerHTML = "<span aria-hidden='true'>&#10095;|</span>";
         L.DomEvent.disableClickPropagation(controlFocusButton);
         L.DomEvent.on(controlFocusButton, 'click', L.DomEvent.stop);
         L.DomEvent.on(controlFocusButton, 'click', (e) => {
           map.closePopup();
-          map._controlContainer.focus();
+          map._controlContainer.querySelector("A").focus();
         }, popup);
     
         let divider = L.DomUtil.create("hr");
@@ -3478,31 +3551,62 @@
         popup._navigationBar = div;
         popup._content.appendChild(divider);
         popup._content.appendChild(div);
-      
+        
+        content.focus();
 
         if(path) {
           // e.target = this._map
           // Looks for keydown, more specifically tab and shift tab
+          path.setAttribute("aria-expanded", "true");
           map.on("keydown", focusFeature);
-          // if popup closes then the focusFeature handler can be removed
-          map.on("popupclose", removeHandlers);
+        } else {
+          map.on("keydown", focusMap);
         }
         // When popup is open, what gets focused with tab needs to be done using JS as the DOM order is not in an accessibility friendly manner
         function focusFeature(focusEvent){
-          if(focusEvent.originalEvent.path[0].title==="Focus Controls" && +focusEvent.originalEvent.keyCode === 9){
+          let isTab = focusEvent.originalEvent.keyCode === 9,
+              shiftPressed = focusEvent.originalEvent.shiftKey;
+          if((focusEvent.originalEvent.path[0].classList.contains("leaflet-popup-close-button") && isTab && !shiftPressed) || focusEvent.originalEvent.keyCode === 27){
             L.DomEvent.stop(focusEvent);
-            path.focus();
-          } else if(focusEvent.originalEvent.shiftKey && +focusEvent.originalEvent.keyCode === 9){
             map.closePopup(popup);
-            L.DomEvent.stop(focusEvent);
             path.focus();
+          } else if ((focusEvent.originalEvent.path[0].title==="Focus Map" || focusEvent.originalEvent.path[0].classList.contains("mapml-popup-content")) && isTab && shiftPressed){
+            setTimeout(() => { //timeout needed so focus of the feature is done even after the keypressup event occurs
+              L.DomEvent.stop(focusEvent);
+              map.closePopup(popup);
+              path.focus();
+            }, 0);
           }
         }
 
+        function focusMap(focusEvent){
+          let isTab = focusEvent.originalEvent.keyCode === 9,
+          shiftPressed = focusEvent.originalEvent.shiftKey;
+
+          if((focusEvent.originalEvent.keyCode === 13 && focusEvent.originalEvent.path[0].classList.contains("leaflet-popup-close-button")) || focusEvent.originalEvent.keyCode === 27 ){
+            L.DomEvent.stopPropagation(focusEvent);
+            map._container.focus();
+            map.closePopup(popup);
+            if(focusEvent.originalEvent.keyCode !== 27)map._popupClosed = true;
+          } else if (isTab && focusEvent.originalEvent.path[0].classList.contains("leaflet-popup-close-button")){
+            map.closePopup(popup);
+          } else if ((focusEvent.originalEvent.path[0].title==="Focus Map" || focusEvent.originalEvent.path[0].classList.contains("mapml-popup-content")) && isTab && shiftPressed){
+            setTimeout(() => { //timeout needed so focus of the feature is done even after the keypressup event occurs
+              L.DomEvent.stop(focusEvent);
+              map.closePopup(popup);
+              map._container.focus();
+            }, 0);
+          }
+        }
+
+        // if popup closes then the focusFeature handler can be removed
+        map.on("popupclose", removeHandlers);
         function removeHandlers(removeEvent){
           if (removeEvent.popup === popup){
             map.off("keydown", focusFeature);
-            map.off("popupclose", removeHandlers);
+            map.off("keydown", focusMap);
+            map.off('popupclose', removeHandlers);
+            if(path) path.setAttribute("aria-expanded", "false");
           }
         }
       },
@@ -3766,13 +3870,17 @@
           }
       },
       _queryTopLayerAtMapCenter: function (event) {
-          if (event.originalEvent.key === " ") {
+        setTimeout(() => {
+          if (this._map.isFocused && !this._map._popupClosed && (event.originalEvent.key === " " || +event.originalEvent.keyCode === 13)) {
             this._map.fire('click', { 
                 latlng: this._map.getCenter(),
                 layerPoint: this._map.latLngToLayerPoint(this._map.getCenter()),
                 containerPoint: this._map.latLngToContainerPoint(this._map.getCenter())
             });
+          } else {
+            delete this._map._popupClosed;
           }
+        }, 0);
       },
       _queryTopLayer: function(event) {
           var layer = this._getTopQueryableLayer();
@@ -3788,7 +3896,7 @@
             crs = layer.crs,
             tileSize = map.options.crs.options.crs.tile.bounds.max.x,
             container = layer._container,
-            popupOptions = {autoPan: true, maxHeight: (map.getSize().y * 0.5) - 50},
+            popupOptions = {autoClose: false, autoPan: true, maxHeight: (map.getSize().y * 0.5) - 50},
             tcrs2pcrs = function (c) {
               return crs.transformation.untransform(c,crs.scale(zoom));
             },
@@ -4481,7 +4589,7 @@
       if(!this._mapMenuVisible) return;
       this._debounceKeyDown(function(){
         let key = e.keyCode;
-        if(key!== 9 && !(!this._layerClicked && key === 67) && e.path[0].innerText !== "Copy Coordinates (C) >")
+        if(key !== 16 && key!== 9 && !(!this._layerClicked && key === 67) && e.path[0].innerText !== "Copy Coordinates (C) >")
           this._hide();
         switch(key){
           case 32:  //SPACE KEY
@@ -4986,14 +5094,20 @@
 
       this._container = L.DomUtil.create("div", "mapml-crosshair", map._container);
       this._container.innerHTML = svgInnerHTML;
-      this._mapFocused = false;
+      map.isFocused = false;
       this._isQueryable = false;
 
       map.on("layerchange layeradd layerremove overlayremove", this._toggleEvents, this);
-      L.DomEvent.on(map._container, "keydown keyup mousedown", this._onKey, this);
-
+      map.on("popupopen", this._isMapFocused, this);
+      L.DomEvent.on(map._container, "keydown keyup mousedown", this._isMapFocused, this);
 
       this._addOrRemoveCrosshair();
+    },
+
+    onRemove: function (map) {
+      map.off("layerchange layeradd layerremove overlayremove", this._toggleEvents);
+      map.off("popupopen", this._isMapFocused);
+      L.DomEvent.off(map._container, "keydown keyup mousedown", this._isMapFocused);
     },
 
     _toggleEvents: function () {
@@ -5013,9 +5127,23 @@
       }
     },
 
+    _addOrRemoveMapOutline: function (e) {
+      let mapContainer = this._map._container;
+      if (this._map.isFocused && !this._outline) {
+        this._outline = L.DomUtil.create("div", "mapml-outline", mapContainer);
+        this._outline.style.width = mapContainer.style.width;
+        this._outline.style.height = mapContainer.style.height;
+        //mapContainer.style.outlineStyle = "auto";
+        //.mapContainer.style.outlineColor = "#44A7CB";
+      } else if (!this._map.isFocused && this._outline) {
+        L.DomUtil.remove(this._outline);
+        delete this._outline;
+      }
+    },
+
     _hasQueryableLayer: function () {
       let layers = this._map.options.mapEl.layers;
-      if (this._mapFocused) {
+      if (this._map.isFocused) {
         for (let layer of layers) {
           if (layer.checked && layer._layer.queryable) {
             return true;
@@ -5025,21 +5153,16 @@
       return false;
     },
 
-    _onKey: function (e) {
-      //set mapFocused = true if arrow buttons are used
-      if (["keydown", "keyup"].includes(e.type) && e.target.classList.contains("leaflet-container") && [32, 37, 38, 39, 40, 187, 189].includes(+e.keyCode)) {
-        this._mapFocused = true;
-      //set mapFocused = true if map is focued using tab
-      } else if (e.type === "keyup" && e.target.classList.contains("leaflet-container") && +e.keyCode === 9) {
-        this._mapFocused = true;
-      // set mapFocused = false and close all popups if tab or escape is used
-      } else if((e.type === "keyup" && e.target.classList.contains("leaflet-interactive") && +e.keyCode === 9) || +e.keyCode === 27){
-        this._mapFocused = false;
-        this._map.closePopup();
-      // set mapFocused = false if any other key is pressed
+    _isMapFocused: function (e) {
+      //set this._map.isFocused = true if arrow buttons are used
+      if (this._map._container.parentNode.activeElement.classList.contains("leaflet-container") && ["keydown"].includes(e.type) && (e.shiftKey && e.keyCode === 9)) {
+        this._map.isFocused = false;
+      } else if (this._map._container.parentNode.activeElement.classList.contains("leaflet-container") && ["keyup", "keydown"].includes(e.type)) {
+        this._map.isFocused = true;
       } else {
-        this._mapFocused = false;
+        this._map.isFocused = false;
       }
+      this._addOrRemoveMapOutline();
       this._addOrRemoveCrosshair();
     },
 
@@ -5048,6 +5171,48 @@
 
   var crosshair = function (options) {
     return new Crosshair(options);
+  };
+
+  var SVGMarker = L.Path.extend({
+    options: {
+      fillColor: '#2e91bf',
+      color: '#ffffff',
+      fill: true,
+      className: "mapml-marker",
+      fillOpacity: 1,
+      weight: 1,
+    },
+
+    initialize: function (latlng, options) {
+      L.setOptions(this, options);
+      this._latlng = L.latLng(latlng);
+    },
+
+    _project: function () {
+      this._point = this._map.latLngToLayerPoint(this._latlng);
+    },
+
+    _update: function () {
+      if (!this._map) return;
+      this._path.setAttribute("d", this.defineMarker(this._point));
+    },
+
+    getLatLngs: function () {
+      return this._latlng;
+    },
+
+    getCenter: function () {
+      return this._latlng;
+    },
+
+    defineMarker: function (p) {
+      return `M${p.x} ${p.y} L${p.x - 12.5} ${p.y - 30} C${p.x - 12.5} ${p.y - 50}, ${p.x + 12.5} ${p.y - 50}, ${p.x + 12.5} ${p.y - 30} L${p.x} ${p.y}z`;
+    },
+
+  });
+
+  var svgMarker = function (latlng, options) {
+    return new SVGMarker(latlng, options);
   };
 
   /* 
@@ -5667,6 +5832,9 @@
 
   M.Crosshair = Crosshair;
   M.crosshair = crosshair;
+
+  M.SVGMarker = SVGMarker;
+  M.svgMarker = svgMarker;
 
   }(window));
 

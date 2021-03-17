@@ -36,7 +36,9 @@
 }
 
 /* Remove opinionated color of links. */
-.leaflet-container a {
+.leaflet-container a,
+.leaflet-container a.leaflet-popup-close-button,
+.leaflet-container a.leaflet-popup-close-button:hover {
   color: initial;
 }
 
@@ -332,10 +334,9 @@
 }
 
 /* Disable pointer events where they'd interfere with the intended action. */
+.leaflet-crosshair *,
 .mapml-contextmenu-item > *,
 .mapml-control-layers label[for^="o"],
-.leaflet-crosshair > *,
-.leaflet-crosshair .leaflet-control,
 .mapml-draggable [aria-grabbed="true"] .mapml-control-layers > * {
   pointer-events: none!important;
 }
@@ -379,6 +380,10 @@ summary {
   background-color: white;
 }
 
+.leaflet-crosshair {
+  cursor: crosshair;
+}
+
 /*
  * Visibility hack – mitigates FOUC.
  * (https://github.com/Maps4HTML/Web-Map-Custom-Element/issues/154)
@@ -391,9 +396,9 @@ summary {
 }
 
 .mapml-crosshair {
-  margin: -18px 0 0 -18px;
-  width: 36px;
-  height: 36px;
+  margin: -36px 0 0 -36px;
+  width: 72px;
+  height: 72px;
   left: 50%;
   top: 50%;
   content: '';
@@ -426,4 +431,33 @@ summary {
   white-space: nowrap;
   text-align: center;
   padding: 2px;
+}
+
+.mapml-outline {
+  outline-style: auto;
+  outline-offset: -1px;
+  z-index: 1000;
+  pointer-events: none;
+  position: relative;
+}
+
+.mapml-control-summary-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.mapml-layer-remove-button {
+  margin-left: 15px;
+  text-decoration: none;
+}
+ 
+ /* Force printers to include background-images of controls for printing.
+   (https://github.com/Maps4HTML/Web-Map-Custom-Element/issues/294) */
+@media print {
+  .leaflet-control {
+    -webkit-print-color-adjust: exact;
+                  color-adjust: exact;
+  }
 }
