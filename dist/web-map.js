@@ -2,7 +2,6 @@ import './leaflet-src.js';  // a lightly modified version of Leaflet for use as 
 import './proj4-src.js';        // modified version of proj4; could be stripped down for mapml
 import './proj4leaflet.js'; // not modified, seems to adapt proj4 for leaflet use.
 import './mapml.js';       // refactored URI usage, replaced with URL standard
-import './Leaflet.fullscreen.js';
 import { MapLayer } from './layer.js';
 import { MapArea } from './map-area.js';
 
@@ -35,7 +34,6 @@ export class WebMap extends HTMLMapElement {
     if (this.controlslist.includes(lowerVal) || !options.includes(lowerVal))return;
     this.setAttribute("controlslist", this.controlslist+` ${lowerVal}`);
   }
-  
   get lat() {
     return this.hasAttribute("lat") ? this.getAttribute("lat") : "0";
   }
@@ -53,15 +51,22 @@ export class WebMap extends HTMLMapElement {
     }
   }
   get projection() {
-    return this.hasAttribute("projection") ? this.getAttribute("projection") : "";
+    return this.hasAttribute("projection") ? this.getAttribute("projection") : "OSMTILE";
   }
   set projection(val) {
     if(val && M[val]){
       this.setAttribute('projection', val);
-      this.dispatchEvent(new CustomEvent('createmap'));
-    } else {
-      throw new Error("Undefined Projection");
-    }
+      if (this._map && this._map.options.projection !== val){
+        this._map.options.crs = M[val];
+        this._map.options.projection = val;
+        for(let layer of this.querySelectorAll("layer-")){
+          layer.removeAttribute("disabled");
+          let reAttach = this.removeChild(layer);
+          this.appendChild(reAttach);
+        }
+        if(this._debug) for(let i = 0; i<2;i++) this.toggleDebug();
+      } else this.dispatchEvent(new CustomEvent('createmap'));
+    } else throw new Error("Undefined Projection");
   }
   get zoom() {
     return this.hasAttribute("zoom") ? this.getAttribute("zoom") : 0;
@@ -101,34 +106,34 @@ export class WebMap extends HTMLMapElement {
 
     this._source = this.outerHTML;
     let tmpl = document.createElement('template');
-    tmpl.innerHTML =
-    `<link rel="stylesheet" href="${new URL("leaflet.css", import.meta.url).href}">` +
-    `<link rel="stylesheet" href="${new URL("leaflet.fullscreen.css", import.meta.url).href}">` +
-    `<link rel="stylesheet" href="${new URL("mapml.css", import.meta.url).href}">`;
+    tmpl.innerHTML = `<link rel="stylesheet" href="${new URL("mapml.css", import.meta.url).href}">`; // jshint ignore:line
 
     const rootDiv = document.createElement('div');
-    rootDiv.classList.add('web-map');
+    rootDiv.classList.add('mapml-web-map');
 
     let shadowRoot = rootDiv.attachShadow({mode: 'open'});
     this._container = document.createElement('div');
-    
+
+    let output = "<output role='status' aria-live='polite' aria-atomic='true' class='mapml-screen-reader-output'></output>";
+    this._container.insertAdjacentHTML("beforeend", output);
+
     // Set default styles for the map element.
     let mapDefaultCSS = document.createElement('style');
     mapDefaultCSS.innerHTML =
     `[is="web-map"] {` +
     `all: initial;` + // Reset properties inheritable from html/body, as some inherited styles may cause unexpected issues with the map element's components (https://github.com/Maps4HTML/Web-Map-Custom-Element/issues/140).
-    `contain: size;` + // Contain size calculations within the map element.
+    `contain: layout size;` + // Contain layout and size calculations within the map element.
     `display: inline-block;` + // This together with dimension properties is required so that Leaflet isn't working with a height=0 box by default.
-    `overflow: hidden;` + // Make the map element behave and look more like a native element.
     `height: 150px;` + // Provide a "default object size" (https://github.com/Maps4HTML/HTML-Map-Element/issues/31).
     `width: 300px;` +
-    `border-width: 2px;` +
+    `border-width: 2px;` + // Set a default border for contrast, similar to UA default for iframes.
     `border-style: inset;` +
+    `box-sizing: inherit;` + // https://github.com/Maps4HTML/Web-Map-Custom-Element/issues/350#issuecomment-888361985
     `}` +
     `[is="web-map"][frameborder="0"] {` +
   	`border-width: 0;` +
   	`}` +
-    `[is="web-map"] .web-map {` +
+    `[is="web-map"] .mapml-web-map {` +
     `display: contents;` + // This div doesn't have to participate in layout by generating its own box.
     `}`;
     
@@ -137,16 +142,13 @@ export class WebMap extends HTMLMapElement {
     `:host .mapml-contextmenu,` +
     `:host .leaflet-control-container {` +
     `visibility: hidden!important;` + // Visibility hack to improve percieved performance (mitigate FOUC) – visibility is unset in mapml.css! (https://github.com/Maps4HTML/Web-Map-Custom-Element/issues/154).
-    `}` +
-    `:host .leaflet-container {` +
-    `contain: strict;` + // Contain size, layout and paint calculations within the leaflet container element.
     `}`;
     
     // Hide all (light DOM) children of the map element except for the
-    // `<area>` and `<div class="web-map">` (shadow root host) elements.
+    // `<area>` and `<div class="mapml-web-map">` (shadow root host) elements.
     let hideElementsCSS = document.createElement('style');
     hideElementsCSS.innerHTML =
-    `[is="web-map"] > :not(area):not(.web-map) {` +
+    `[is="web-map"] > :not(area):not(.mapml-web-map) {` +
     `display: none!important;` +
     `}`;
     
@@ -208,6 +210,7 @@ export class WebMap extends HTMLMapElement {
             projection: this.projection,
             query: true,
             contextMenu: true,
+            announceMovement: M.options.announceMovement,
             mapEl: this,
             crs: M[this.projection],
             zoom: this.zoom,
@@ -222,6 +225,8 @@ export class WebMap extends HTMLMapElement {
           this._addToHistory();
           // the attribution control is not optional
           this._attributionControl =  this._map.attributionControl.setPrefix('<a href="https://www.w3.org/community/maps4html/" title="W3C Maps for HTML Community Group">Maps4HTML</a> | <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a>');
+          this._attributionControl.getContainer().setAttribute("role","group");
+          this._attributionControl.getContainer().setAttribute("aria-label","Map data attribution");
 
           this.setControls(false,false,true);
           this._crosshair = M.crosshair().addTo(this._map);
@@ -242,12 +247,16 @@ export class WebMap extends HTMLMapElement {
             }
           }
 
-          // undisplay the img in the image map, because it's not needed now
-          // gives a slight fouc, not optimal
+          // undisplay the img in the image map, because it's not needed now.
+          // gives a slight FOUC, unless:
+          // 1) the img is pre-styled (https://github.com/Maps4HTML/Web-Map-Custom-Element/blob/80a4a4e372d2ef61bb7cad6a111e17e396b8e908/index-map-area.html#L35)
+          // 2) placed after the map element
           if (this.poster) {
-            this.poster.style.display = 'none';
+            this.poster.setAttribute('hidden', '');
           }
           
+          // https://github.com/Maps4HTML/Web-Map-Custom-Element/issues/274
+          this.setAttribute('role', 'application');
           // Make the Leaflet container element programmatically identifiable
           // (https://github.com/Leaflet/Leaflet/issues/7193).
           this._container.setAttribute('role', 'region');
@@ -272,6 +281,7 @@ export class WebMap extends HTMLMapElement {
   adoptedCallback() {
 //    console.log('Custom map element moved to new page.');
   }
+
   setControls(isToggle, toggleShow, setup){
     if (this.controls && this._map) {
       let controls = ["_zoomControl", "_reloadButton", "_fullScreenControl", "_layerControl"],
@@ -312,7 +322,7 @@ export class WebMap extends HTMLMapElement {
       }
       if (!this.controlslist.toLowerCase().includes("nofullscreen") && !this._fullScreenControl && (totalSize + 49) <= mapSize){
         totalSize += 49;
-        this._fullScreenControl = L.control.fullscreen().addTo(this._map);
+        this._fullScreenControl = M.fullscreenButton().addTo(this._map);
       }
       //removes any control layers that are not needed, either by the toggling or by the controlslist attribute
       for(let i in options){
@@ -390,6 +400,19 @@ export class WebMap extends HTMLMapElement {
         this.dispatchEvent(new CustomEvent("layerchange", {details:{target: this, originalEvent: e}}));
       }
     }, false);
+
+    this.parentElement.addEventListener('keyup', function (e) {
+      if(e.keyCode === 9 && document.activeElement.nodeName === "MAPML-VIEWER"){
+        document.activeElement.dispatchEvent(new CustomEvent('mapfocused', {detail:
+              {target: this}}));
+      }
+    });
+    this.parentElement.addEventListener('mousedown', function (e) {
+      if(document.activeElement.nodeName === "MAPML-VIEWER"){
+        document.activeElement.dispatchEvent(new CustomEvent('mapfocused', {detail:
+              {target: this}}));
+      }
+    });
     this._map.on('load',
       function () {
         this.dispatchEvent(new CustomEvent('load', {detail: {target: this}}));
@@ -503,8 +526,7 @@ export class WebMap extends HTMLMapElement {
   }
 
   toggleDebug(){
-    let mapEl = this;
-    if(mapEl._debug){
+    if(this._debug){
       this._debug.remove();
       this._debug = undefined;
     } else {
@@ -527,8 +549,8 @@ export class WebMap extends HTMLMapElement {
     }
   }
   zoomTo(lat, lon, zoom) {
-    zoom = Number.isInteger(zoom)? zoom:this.zoom;
-    var location = new L.LatLng(lat,lon);
+    zoom = Number.isInteger(+zoom) ? +zoom : this.zoom;
+    let location = new L.LatLng(+lat, +lon);
     this._map.setView(location, zoom);
     this.zoom = zoom;
     this.lat = location.lat;
@@ -542,50 +564,110 @@ export class WebMap extends HTMLMapElement {
     this.zoom = this._map.getZoom();
   }
 
+  /**
+   * Adds to the maps history on moveends
+   * @private
+   */
   _addToHistory(){
-    if(this._traversalCall){
-      this._traversalCall = false;
+    if(this._traversalCall > 0) { // this._traversalCall tracks how many consecutive moveends to ignore from history
+      this._traversalCall--;      // this is useful for ignoring moveends corresponding to back, forward and reload
       return;
     }
-    let mapLocation = this._map.getCenter();
-    let location ={
-      zoom:this._map.getZoom(),
-      lat:mapLocation.lat,
-      lng:mapLocation.lng,
+
+    let mapLocation = this._map.getPixelBounds().getCenter();
+    let location = {
+      zoom: this._map.getZoom(),
+      x:mapLocation.x,
+      y:mapLocation.y,
     };
     this._historyIndex++;
-    this._history.push(location);
+    this._history.splice(this._historyIndex, 0, location);
   }
 
+  /**
+   * Allow user to move back in history
+   */
   back(){
-    let mapEl = this,
-        history = mapEl._history;
-    if(mapEl._historyIndex > 0){
-      mapEl._historyIndex--;
+    let history = this._history;
+    let curr = history[this._historyIndex];
+
+    if(this._historyIndex > 0){
+      this._historyIndex--;
+      let prev = history[this._historyIndex];
+
+      if(prev.zoom !== curr.zoom){
+        this._traversalCall = 2;  // allows the next 2 moveends to be ignored from history
+
+        let currScale = this._map.options.crs.scale(curr.zoom); // gets the scale of the current zoom level
+        let prevScale = this._map.options.crs.scale(prev.zoom); // gets the scale of the previous zoom level
+
+        let scale = currScale / prevScale; // used to convert the previous pixel location to be in terms of the current zoom level
+
+        this._map.panBy([((prev.x * scale) - curr.x), ((prev.y * scale) - curr.y)], {animate: false});
+        this._map.setZoom(prev.zoom);
+      } else {
+        this._traversalCall = 1;
+        this._map.panBy([(prev.x - curr.x), (prev.y - curr.y)]);
+      }
     }
-    let prev = history[mapEl._historyIndex];
-    mapEl._traversalCall = true;
-    mapEl.zoomTo(prev.lat,prev.lng,prev.zoom);
   }
 
+  /**
+   * Allows user to move forward in history
+   */
   forward(){
-    let mapEl = this,
-        history = this._history;
-    if(mapEl._historyIndex < history.length -1){
-      mapEl._historyIndex++;
+    let history = this._history;
+    let curr = history[this._historyIndex];
+    if(this._historyIndex < history.length - 1){
+      this._historyIndex++;
+      let next = history[this._historyIndex];
+
+      if(next.zoom !== curr.zoom){
+        this._traversalCall = 2; // allows the next 2 moveends to be ignored from history
+
+        let currScale = this._map.options.crs.scale(curr.zoom); // gets the scale of the current zoom level
+        let nextScale = this._map.options.crs.scale(next.zoom); // gets the scale of the next zoom level
+
+        let scale = currScale / nextScale; // used to convert the next pixel location to be in terms of the current zoom level
+
+        this._map.panBy([((next.x * scale) - curr.x), ((next.y * scale) - curr.y)], {animate: false});
+        this._map.setZoom(next.zoom);
+      } else {
+        this._traversalCall = 1;
+        this._map.panBy([(next.x - curr.x), (next.y - curr.y)]);
+      }
     }
-    let next = history[this._historyIndex];
-    mapEl._traversalCall = true;
-    mapEl.zoomTo(next.lat,next.lng,next.zoom);
   }
 
+  /**
+   * Allows the user to reload/reset the map's location to it's initial location
+   */
   reload(){
-    let mapEl = this,
-        initialLocation = mapEl._history.shift();
-    mapEl._history = [initialLocation];
-    mapEl._historyIndex = 0;
-    mapEl._traversalCall = true;
-    mapEl.zoomTo(initialLocation.lat,initialLocation.lng,initialLocation.zoom);
+    let initialLocation = this._history.shift();
+    let mapLocation = this._map.getPixelBounds().getCenter();
+    let curr = {
+      zoom: this._map.getZoom(),
+      x:mapLocation.x,
+      y:mapLocation.y,
+    };
+
+    this._history = [initialLocation];
+    this._historyIndex = 0;
+
+    if(initialLocation.zoom !== curr.zoom) {
+      this._traversalCall = 2; // ignores the next 2 moveend events
+
+      let currScale = this._map.options.crs.scale(curr.zoom); // gets the scale of the current zoom level
+      let initScale = this._map.options.crs.scale(initialLocation.zoom); // gets the scale of the initial location's zoom
+
+      let scale = currScale / initScale;
+
+      this._map.panBy([((initialLocation.x * scale) - curr.x), ((initialLocation.y * scale) - curr.y)], {animate: false});
+      this._map.setZoom(initialLocation.zoom);
+    } else { // if it's on the same zoom level as the initial location, no need to calculate scales
+      this._traversalCall = 1;
+      this._map.panBy([(initialLocation.x- curr.x), (initialLocation.y - curr.y)]);
+    }
   }
 
   viewSource(){
@@ -597,11 +679,12 @@ export class WebMap extends HTMLMapElement {
 
   defineCustomProjection(jsonTemplate) {
     let t = JSON.parse(jsonTemplate);
-    if (t === undefined || !t.code || !t.proj4string || !t.projection || !t.resolutions || !t.origin || !t.bounds) throw new Error('Incomplete TCRS Definition');
+    if (t === undefined || !t.proj4string || !t.projection || !t.resolutions || !t.origin || !t.bounds) throw new Error('Incomplete TCRS Definition');
+    if (t.projection.indexOf(":") >= 0) throw new Error('":" is not permitted in projection name');
     if (M[t.projection.toUpperCase()]) return t.projection.toUpperCase();
     let tileSize = [256, 512, 1024, 2048, 4096].includes(t.tilesize)?t.tilesize:256;
 
-    M[t.projection] = new L.Proj.CRS(t.code, t.proj4string, {
+    M[t.projection] = new L.Proj.CRS(t.projection, t.proj4string, {
       origin: t.origin,
       resolutions: t.resolutions,
       bounds: L.bounds(t.bounds),
@@ -704,25 +787,6 @@ export class WebMap extends HTMLMapElement {
   }
 
   _ready() {
-    // when used in a custom element, the leaflet script element is hidden inside
-    // the import's shadow dom.
-    // this might not work and may not be necessary in standard custom elements
-    L.Icon.Default.imagePath = (function () {
-      var imp = document.querySelector('link[rel="import"][href*="web-map.html"]'),
-        doc = imp ? imp.import : document,
-        scripts = doc.getElementsByTagName('script'),
-        leafletRe = /[\/^]leaflet[\-\._]?([\w\-\._]*)\.js\??/;
-
-      var i, len, src, path;
-
-      for (i = 0, len = scripts.length; i < len; i++) {
-        src = scripts[i].src;
-        if (src.match(leafletRe)) {
-          path = src.split(leafletRe)[0];
-          return (path ? path + '/' : '') + 'images';
-        }
-      }
-    }());
     if (this.hasAttribute('name')) {
       var name = this.getAttribute('name');
       if (name) {
