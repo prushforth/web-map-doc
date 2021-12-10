@@ -299,33 +299,6 @@
           // info: https://github.com/Leaflet/Leaflet/pull/4597
           L.DomUtil.addClass(this._container, 'leaflet-pane mapml-vector-container');
           L.setOptions(this.options.renderer, {pane: this._container});
-          let style = L.DomUtil.create("style", "mapml-feature-style", this._container);
-          style.innerHTML = `
-        g[role="link"]:focus,
-        g[role="link"]:hover,
-        g[role="link"]:focus path,
-        g[role="link"]:hover path,
-        g[role="link"] path:focus,
-        g[role="link"] path:hover,
-        g[role="button"]:focus,
-        g[role="button"]:hover,
-        g[role="button"]:focus path,
-        g[role="button"]:hover path,
-        g[role="button"] path:focus,
-        g[role="button"] path:hover,
-        path[tabindex="0"]:focus {
-          stroke: #0000EE!important;
-          stroke: LinkText!important;
-        }
-        g[role="link"]:focus:not(:focus-visible),
-        g[role="link"]:focus:not(:focus-visible) path,
-        g[role="link"] path:focus:not(:focus-visible),
-        g[role="button"]:focus:not(:focus-visible),
-        g[role="button"]:focus:not(:focus-visible) path,
-        g[role="button"] path:focus:not(:focus-visible),
-        path[tabindex="0"]:focus:not(:focus-visible) {
-          outline: 0!important;
-        }`;
         }
 
         this._layers = {};
@@ -611,7 +584,6 @@
       _removeCSS: function(){
         let toDelete = this._container.querySelectorAll("link[rel=stylesheet],style");
         for(let i = 0; i < toDelete.length;i++){
-          if(toDelete[i].classList.contains("mapml-feature-style")) continue;
           this._container.removeChild(toDelete[i]);
         }
       },
@@ -4190,7 +4162,7 @@
       if(key === 13)
         e.preventDefault();
       // keep track of where the focus is on the layer menu and when the layer menu is tabbed out of, focus on layer control
-      if(key === 9 || key === 27){
+      if(this._layerMenuTabs && (key === 9 || key === 27)){
         if(e.shiftKey){
           this._layerMenuTabs -= 1;
         } else {
@@ -4684,7 +4656,6 @@
       } else if (zoomTo && !link.inPlace && justPan){
         leafletLayer._map.options.mapEl.zoomTo(+zoomTo.lat, +zoomTo.lng, +zoomTo.z);
         if(opacity) layer.opacity = opacity;
-        map.getContainer().focus();
       }
     },
 
@@ -5968,7 +5939,7 @@
   L.Map.Keyboard.include({
       _onKeyDown: function (e) {
 
-          if (e.altKey || e.ctrlKey || e.metaKey) { return; }
+          if (e.altKey || e.metaKey) { return; }
 
           let zoomIn = {
               187: 187,
@@ -5993,6 +5964,9 @@
                   offset = this._panKeys[key];
                   if (e.shiftKey) {
                       offset = L.point(offset).multiplyBy(3);
+                  }
+                  if (e.ctrlKey) {
+                      offset = L.point(offset).divideBy(5);
                   }
 
                   map.panBy(offset);
