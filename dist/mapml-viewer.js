@@ -127,7 +127,6 @@ export class MapViewer extends HTMLElement {
     `:host([hidden]) {` +
     `display: none!important;` +
     `}` +
-    `:host .mapml-contextmenu,` +
     `:host .leaflet-control-container {` +
     `visibility: hidden!important;` + // Visibility hack to improve percieved performance (mitigate FOUC) – visibility is unset in mapml.css! (https://github.com/Maps4HTML/Web-Map-Custom-Element/issues/154).
     `}`;
@@ -200,6 +199,7 @@ export class MapViewer extends HTMLElement {
             query: true,
             contextMenu: true,
             announceMovement: M.options.announceMovement,
+            featureIndex: true,
             mapEl: this,
             crs: M[this.projection],
             zoom: this.zoom,

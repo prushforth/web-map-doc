@@ -341,6 +341,7 @@
           L.DomUtil.remove(this._container);
         }
         L.FeatureGroup.prototype.onRemove.call(this, map);
+        this._map.featureIndex.cleanIndex();
       },
 
       getEvents: function(){
@@ -432,6 +433,8 @@
 
       _resetFeatures : function (zoom){
         this.clearLayers();
+        // since features are removed and re-added by zoom level, need to clean the feature index before re-adding
+        if(this._map) this._map.featureIndex.cleanIndex();
         if(this._features && this._features[zoom]){
           for(let k =0;k < this._features[zoom].length;k++){
             this.addLayer(this._features[zoom][k]);
@@ -3044,9 +3047,9 @@
         mapFocusButton.type = "button";
         mapFocusButton.title = "Focus Map";
         mapFocusButton.innerHTML = "<span aria-hidden='true'>|&#10094;</span>";
-        L.DomEvent.disableClickPropagation(mapFocusButton);
-        L.DomEvent.on(mapFocusButton, 'click', L.DomEvent.stop);
         L.DomEvent.on(mapFocusButton, 'click', (e)=>{
+          L.DomEvent.stop(e);
+          map.featureIndex._sortIndex();
           map.closePopup();
           map._container.focus();
         }, popup);
@@ -3056,8 +3059,6 @@
         previousButton.type = "button";
         previousButton.title = "Previous Feature";
         previousButton.innerHTML = "<span aria-hidden='true'>&#10094;</span>";
-        L.DomEvent.disableClickPropagation(previousButton);
-        L.DomEvent.on(previousButton, 'click', L.DomEvent.stop);
         L.DomEvent.on(previousButton, 'click', layer._previousFeature, popup);
 
         // static feature counter that 1/1
@@ -3070,8 +3071,6 @@
         nextButton.type = "button";
         nextButton.title = "Next Feature";
         nextButton.innerHTML = "<span aria-hidden='true'>&#10095;</span>";
-        L.DomEvent.disableClickPropagation(nextButton);
-        L.DomEvent.on(nextButton, 'click', L.DomEvent.stop);
         L.DomEvent.on(nextButton, 'click', layer._nextFeature, popup);
         
         // creates >| button, focuses map controls
@@ -3079,9 +3078,12 @@
         controlFocusButton.type = "button";
         controlFocusButton.title = "Focus Controls";
         controlFocusButton.innerHTML = "<span aria-hidden='true'>&#10095;|</span>";
-        L.DomEvent.disableClickPropagation(controlFocusButton);
-        L.DomEvent.on(controlFocusButton, 'click', L.DomEvent.stop);
         L.DomEvent.on(controlFocusButton, 'click', (e) => {
+          map.featureIndex._sortIndex();
+          map.featureIndex.currentIndex = map.featureIndex.inBoundFeatures.length - 1;
+          map.featureIndex.inBoundFeatures[0].path.setAttribute("tabindex", -1);
+          map.featureIndex.inBoundFeatures[map.featureIndex.currentIndex].path.setAttribute("tabindex", 0);
+          L.DomEvent.stop(e);
           map.closePopup();
           map._controlContainer.querySelector("A").focus();
         }, popup);
@@ -3108,9 +3110,11 @@
           let isTab = focusEvent.originalEvent.keyCode === 9,
               shiftPressed = focusEvent.originalEvent.shiftKey;
           if((path[0].classList.contains("leaflet-popup-close-button") && isTab && !shiftPressed) || focusEvent.originalEvent.keyCode === 27){
-            L.DomEvent.stop(focusEvent);
-            map.closePopup(popup);
-            group.focus();
+            setTimeout(() => {
+              L.DomEvent.stop(focusEvent);
+              map.closePopup(popup);
+              group.focus();
+            }, 0);
           } else if ((path[0].title==="Focus Map" || path[0].classList.contains("mapml-popup-content")) && isTab && shiftPressed){
             setTimeout(() => { //timeout needed so focus of the feature is done even after the keypressup event occurs
               L.DomEvent.stop(focusEvent);
@@ -3723,6 +3727,7 @@
       this._keyboardEvent = false;
 
       this._container = L.DomUtil.create("div", "mapml-contextmenu", map._container);
+      this._container.setAttribute('hidden', '');
       
       for (let i = 0; i < 6; i++) {
         this._items[i].el = this._createItem(this._container, this._items[i]);
@@ -3730,6 +3735,7 @@
 
       this._coordMenu = L.DomUtil.create("div", "mapml-contextmenu mapml-submenu", this._container);
       this._coordMenu.id = "mapml-copy-submenu";
+      this._coordMenu.setAttribute('hidden', '');
 
       this._clickEvent = null;
 
@@ -3742,6 +3748,7 @@
       this._items[8].el = this._createItem(this._container, this._items[8]);
 
       this._layerMenu = L.DomUtil.create("div", "mapml-contextmenu mapml-layer-menu", map._container);
+      this._layerMenu.setAttribute('hidden', '');
       for (let i = 0; i < this._layerItems.length; i++) {
         this._createItem(this._layerMenu, this._layerItems[i]);
       }
@@ -4069,7 +4076,7 @@
             this._setPosition(pt,container);
 
             if (!this._mapMenuVisible) {
-              container.style.display = 'block';
+              container.removeAttribute('hidden');
                 this._mapMenuVisible = true;
             }
 
@@ -4080,9 +4087,9 @@
     _hide: function () {
         if (this._mapMenuVisible) {
             this._mapMenuVisible = false;
-            this._container.style.display = 'none';
-            this._coordMenu.style.display = 'none';
-            this._layerMenu.style.display = 'none';
+            this._container.setAttribute('hidden', '');
+            this._coordMenu.setAttribute('hidden', '');
+            this._layerMenu.setAttribute('hidden', '');
             this._map.fire('contextmenu.hide', {contextmenu: this});
             setTimeout(() => this._map._container.focus(), 0);
         }
@@ -4118,21 +4125,18 @@
     },
 
     _getElementSize: function (el) {
-        let size = this._size,
-            initialDisplay = el.style.display;
+        let size = this._size;
 
         if (!size || this._sizeChanged) {
             size = {};
 
             el.style.left = '-999999px';
             el.style.right = 'auto';
-            el.style.display = 'block';
 
             size.x = el.offsetWidth;
             size.y = el.offsetHeight;
 
             el.style.left = 'auto';
-            el.style.display = initialDisplay;
 
             this._sizeChanged = false;
         }
@@ -4144,7 +4148,7 @@
      _focusOnLayerControl: function(){
       this._mapMenuVisible = false;
       delete this._layerMenuTabs;
-      this._layerMenu.style.display = 'none';
+      this._layerMenu.setAttribute('hidden', '');
       if(this._elementInFocus){
         this._elementInFocus.focus();
       } else {
@@ -4225,7 +4229,7 @@
           copyEl = this._items[5].el.el;
 
       copyEl.setAttribute("aria-expanded","true");
-      menu.style.display = "block";
+      menu.removeAttribute('hidden');
 
       if (click.containerPoint.x + 160 + 80 > mapSize.x) {
         menu.style.left = 'auto';
@@ -4250,7 +4254,7 @@
           e.srcElement.innerText === (M.options.locale.cmCopyCoords + " (C)"))return;
       let menu = this._coordMenu, copyEl = this._items[5].el.el;
       copyEl.setAttribute("aria-expanded","false");
-      menu.style.display = "none";
+      menu.setAttribute('hidden', '');
     },
 
     _onItemMouseOver: function (e) {
@@ -4901,32 +4905,9 @@
   var Crosshair = L.Layer.extend({
     onAdd: function (map) {
 
-      //SVG crosshair design from https://github.com/xguaita/Leaflet.MapCenterCoord/blob/master/src/icons/MapCenterCoordIcon1.svg?short_path=81a5c76
-      let svgInnerHTML = `<svg
-    xmlns:dc="http://purl.org/dc/elements/1.1/"
-    xmlns:cc="http://creativecommons.org/ns#"
-    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-    xmlns:svg="http://www.w3.org/2000/svg"
-    xmlns="http://www.w3.org/2000/svg"
-    version="1.1"
-    x="0px"
-    y="0px"
-    viewBox="0 0 99.999998 99.999998"
-    xml:space="preserve">
-    <g><circle
-        r="3.9234731"
-        cy="50.21946"
-        cx="50.027821"
-        style="color:#000000;clip-rule:nonzero;display:inline;overflow:visible;isolation:auto;mix-blend-mode:normal;color-interpolation:sRGB;color-interpolation-filters:linearRGB;solid-color:#000000;solid-opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ffffff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;color-rendering:auto;image-rendering:auto;shape-rendering:auto;text-rendering:auto;enable-background:accumulate" /><path
-        d="m 4.9734042,54.423642 31.7671398,0 c 2.322349,0 4.204185,-1.881836 4.204185,-4.204185 0,-2.322349 -1.881836,-4.204184 -4.204185,-4.204184 l -31.7671398,0 c -2.3223489,-2.82e-4 -4.20418433,1.881554 -4.20418433,4.204184 0,2.322631 1.88183543,4.204185 4.20418433,4.204185 z"
-        style="color:#000000;clip-rule:nonzero;display:inline;overflow:visible;isolation:auto;mix-blend-mode:normal;color-interpolation:sRGB;color-interpolation-filters:linearRGB;solid-color:#000000;solid-opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ffffff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;color-rendering:auto;image-rendering:auto;shape-rendering:auto;text-rendering:auto;enable-background:accumulate" /><path
-        d="m 54.232003,5.1650429 c 0,-2.3223489 -1.881836,-4.20418433 -4.204184,-4.20418433 -2.322349,0 -4.204185,1.88183543 -4.204185,4.20418433 l 0,31.7671401 c 0,2.322349 1.881836,4.204184 4.204185,4.204184 2.322348,0 4.204184,-1.881835 4.204184,-4.204184 l 0,-31.7671401 z"
-        style="fill:#000000;stroke:#ffffff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;fill-opacity:1" /><path
-        d="m 99.287826,50.219457 c 0,-2.322349 -1.881835,-4.204184 -4.204184,-4.204184 l -31.76714,0 c -2.322349,0 -4.204184,1.881835 -4.204184,4.204184 0,2.322349 1.881835,4.204185 4.204184,4.204185 l 31.76714,0 c 2.320658,0 4.204184,-1.881836 4.204184,-4.204185 z"
-        style="color:#000000;clip-rule:nonzero;display:inline;overflow:visible;isolation:auto;mix-blend-mode:normal;color-interpolation:sRGB;color-interpolation-filters:linearRGB;solid-color:#000000;solid-opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ffffff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;color-rendering:auto;image-rendering:auto;shape-rendering:auto;text-rendering:auto;enable-background:accumulate" /><path
-        d="m 45.823352,95.27359 c 0,2.322349 1.881836,4.204184 4.204185,4.204184 2.322349,0 4.204184,-1.881835 4.204184,-4.204184 l 0,-31.76714 c 0,-2.322349 -1.881835,-4.204185 -4.204184,-4.204185 -2.322349,0 -4.204185,1.881836 -4.204185,4.204185 l 0,31.76714 z"
-        style="color:#000000;clip-rule:nonzero;display:inline;overflow:visible;isolation:auto;mix-blend-mode:normal;color-interpolation:sRGB;color-interpolation-filters:linearRGB;solid-color:#000000;solid-opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ffffff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;color-rendering:auto;image-rendering:auto;shape-rendering:auto;text-rendering:auto;enable-background:accumulate" /></g></svg>
- `;
+      // SVG crosshair design from https://github.com/xguaita/Leaflet.MapCenterCoord/blob/master/src/icons/MapCenterCoordIcon1.svg?short_path=81a5c76
+      // Optimized with SVGOMG: https://jakearchibald.github.io/svgomg/
+      let svgInnerHTML = `<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" viewBox="0 0 100 100"><g stroke="#fff" stroke-linecap="round" stroke-linejoin="round"><circle cx="50.028" cy="50.219" r="3.923" stroke-width="2" color="currentColor" overflow="visible"/><path stroke-width="3" d="M4.973 54.424h31.768a4.204 4.204 0 1 0 0-8.409H4.973A4.203 4.203 0 0 0 .77 50.22a4.203 4.203 0 0 0 4.204 4.205z" color="currentColor" overflow="visible"/><path stroke-width="3" d="M54.232 5.165a4.204 4.204 0 1 0-8.408 0v31.767a4.204 4.204 0 1 0 8.408 0V5.165z"/><path stroke-width="3" d="M99.288 50.22a4.204 4.204 0 0 0-4.204-4.205H63.317a4.204 4.204 0 1 0 0 8.409h31.767a4.205 4.205 0 0 0 4.204-4.205zM45.823 95.274a4.204 4.204 0 1 0 8.409 0V63.506a4.204 4.204 0 1 0-8.409 0v31.768z" color="currentColor" overflow="visible"/></g></svg>`;
 
       this._container = L.DomUtil.create("div", "mapml-crosshair", map._container);
       this._container.innerHTML = svgInnerHTML;
@@ -4957,9 +4938,9 @@
 
     _addOrRemoveCrosshair: function (e) {
       if (this._hasQueryableLayer()) {
-        this._container.style.visibility = null;
+        this._container.removeAttribute("hidden");
       } else {
-        this._container.style.visibility = "hidden";
+        this._container.setAttribute("hidden", "");
       }
     },
 
@@ -4985,6 +4966,7 @@
       return false;
     },
 
+    // TODO: should be merged with the 'mapfocused' event emitted by mapml-viewer and map, not trivial
     _isMapFocused: function (e) {
       //set this._map.isFocused = true if arrow buttons are used
       if(!this._map._container.parentNode.activeElement){
@@ -4996,6 +4978,7 @@
         this._map.isFocused = false;
       } else this._map.isFocused = isLeafletContainer && ["keyup", "keydown"].includes(e.type);
 
+      if(this._map.isFocused) this._map.fire("mapkeyboardfocused");
       this._addOrRemoveMapOutline();
       this._addOrRemoveCrosshair();
     },
@@ -5293,13 +5276,19 @@
         this._coordinateToArrays(span, main, subParts, false, span.getAttribute("class"), parents.concat([span]));
       }
       let noSpan = coords.textContent.replace(/(<([^>]+)>)/ig, ''),
-          pairs = noSpan.match(/(\S+\s+\S+)/gim), local = [];
+          pairs = noSpan.match(/(\S+\s+\S+)/gim), local = [], bounds;
       for (let p of pairs) {
         let numPair = [];
         p.split(/\s+/gim).forEach(M.parseNumber, numPair);
         let point = M.pointToPCRSPoint(L.point(numPair), this.options.zoom, this.options.projection, this.options.nativeCS);
         local.push(point);
-        this._bounds = this._bounds ? this._bounds.extend(point) : L.bounds(point, point);
+        bounds = bounds ? bounds.extend(point) : L.bounds(point, point);
+      }
+      if (this._bounds) {
+        this._bounds.extend(bounds.min);
+        this._bounds.extend(bounds.max);
+      } else {
+        this._bounds = bounds;
       }
       if (isFirst) {
         main.push({ points: local });
@@ -5312,6 +5301,7 @@
         }
         subParts.unshift({
           points: local,
+          center: bounds.getCenter(),
           cls: `${cls || ""} ${wrapperAttr.className || ""}`.trim(),
           attr: attrMap,
           link: wrapperAttr.link,
@@ -5348,6 +5338,10 @@
       if (!this._bounds) return null;
       return this._map.options.crs.unproject(this._bounds.getCenter());
     },
+
+    getPCRSCenter: function () {
+      return this._bounds.getCenter();
+    },
   });
 
   /**
@@ -5366,8 +5360,6 @@
    * @returns {*}
    */
   var FeatureRenderer = L.SVG.extend({
-    
-
     /**
      * Override method of same name from L.SVG, use the this._container property
      * to set up the role="none presentation" on featureGroupu container,
@@ -5410,9 +5402,6 @@
         if (p.subrings) {
           for (let r of p.subrings) {
             this._createPath(r, layer.options.className, r.attr['aria-label'], (r.link !== undefined), r.attr);
-            if(r.attr && r.attr.tabindex){
-              p.path.setAttribute('tabindex', r.attr.tabindex || '0');
-            }
           }
         }
         this._updateStyle(layer);
@@ -5439,7 +5428,7 @@
         if (title) p.setAttribute('aria-label', title);
       } else {
         for(let [name, value] of Object.entries(attr)){
-          if(name === "id") continue;
+          if(name === "id" || name === "tabindex") continue;
           p.setAttribute(name, value);
         }
       }
@@ -5665,7 +5654,6 @@
       L.LayerGroup.prototype.initialize.call(this, layers, options);
 
       if((this.options.onEachFeature && this.options.properties) || this.options.link) {
-        this.options.group.setAttribute('tabindex', '0');
         L.DomUtil.addClass(this.options.group, "leaflet-interactive");
         L.DomEvent.on(this.options.group, "keyup keydown mousedown", this._handleFocus, this);
         let firstLayer = layers[Object.keys(layers)[0]];
@@ -5685,12 +5673,59 @@
       if(this.options.featureID) this.options.group.setAttribute("data-fid", this.options.featureID);
     },
 
+    onAdd: function (map) {
+      L.LayerGroup.prototype.onAdd.call(this, map);
+      this.updateInteraction();
+    },
+
+    updateInteraction: function () {
+      let map = this._map || this.options._leafletLayer._map;
+      if((this.options.onEachFeature && this.options.properties) || this.options.link)
+        map.featureIndex.addToIndex(this, this.getPCRSCenter(), this.options.group);
+
+      for (let layerID in this._layers) {
+        let layer = this._layers[layerID];
+        for(let part of layer._parts){
+          if(layer.featureAttributes && layer.featureAttributes.tabindex)
+            map.featureIndex.addToIndex(layer, layer.getPCRSCenter(), part.path);
+          for(let subPart of part.subrings) {
+            if(subPart.attr && subPart.attr.tabindex) map.featureIndex.addToIndex(layer, subPart.center, subPart.path);
+          }
+        }
+      }
+    },
+
     /**
      * Handler for focus events
      * @param {L.DOMEvent} e - Event that occurred
      * @private
      */
     _handleFocus: function(e) {
+      if((e.keyCode === 9 || e.keyCode === 16) && e.type === "keydown"){
+        let index = this._map.featureIndex.currentIndex;
+        if(e.keyCode === 9 && e.shiftKey) {
+          if(index === this._map.featureIndex.inBoundFeatures.length - 1)
+            this._map.featureIndex.inBoundFeatures[index].path.setAttribute("tabindex", -1);
+          if(index !== 0){
+            L.DomEvent.stop(e);
+            this._map.featureIndex.inBoundFeatures[index - 1].path.focus();
+            this._map.featureIndex.currentIndex--;
+          }
+        } else if (e.keyCode === 9) {
+          if(index !== this._map.featureIndex.inBoundFeatures.length - 1) {
+            L.DomEvent.stop(e);
+            this._map.featureIndex.inBoundFeatures[index + 1].path.focus();
+            this._map.featureIndex.currentIndex++;
+          } else {
+            this._map.featureIndex.inBoundFeatures[0].path.setAttribute("tabindex", -1);
+            this._map.featureIndex.inBoundFeatures[index].path.setAttribute("tabindex", 0);
+          }
+        }
+      } else if (!([9, 16, 13, 27].includes(e.keyCode))){
+        this._map.featureIndex.currentIndex = 0;
+        this._map.featureIndex.inBoundFeatures[0].path.focus();
+      }
+
       if(e.target.tagName.toUpperCase() !== "G") return;
       if((e.keyCode === 9 || e.keyCode === 16 || e.keyCode === 13) && e.type === "keyup") {
         this.openTooltip();
@@ -5722,22 +5757,10 @@
      * @private
      */
     _previousFeature: function(e){
-      let group = this._source.group.previousSibling;
-      if(!group){
-        let currentIndex = this._source.group.closest("div.mapml-layer").style.zIndex;
-        let overlays = this._map.getPane("overlayPane").children;
-        for(let i = overlays.length - 1; i >= 0; i--){
-          let layer = overlays[i];
-          if(layer.style.zIndex >= currentIndex) continue;
-          group = layer.querySelector("g.leaflet-interactive");
-          if(group){
-            group = group.parentNode.lastChild;
-            break;
-          }
-        }
-        if (!group) group = this._source.group;
-      }
-      group.focus();
+      L.DomEvent.stop(e);
+      this._map.featureIndex.currentIndex = Math.max(this._map.featureIndex.currentIndex - 1, 0);
+      let prevFocus = this._map.featureIndex.inBoundFeatures[this._map.featureIndex.currentIndex];
+      prevFocus.path.focus();
       this._map.closePopup();
     },
 
@@ -5747,19 +5770,24 @@
      * @private
      */
     _nextFeature: function(e){
-      let group = this._source.group.nextSibling;
-      if(!group){
-        let currentIndex = this._source.group.closest("div.mapml-layer").style.zIndex;
-
-        for(let layer of this._map.getPane("overlayPane").children){
-          if(layer.style.zIndex <= currentIndex) continue;
-          group = layer.querySelectorAll("g.leaflet-interactive");
-          if(group.length > 0)break;
-        }
-        group = group && group.length > 0 ? group[0] : this._source.group;
-      }
-      group.focus();
+      L.DomEvent.stop(e);
+      this._map.featureIndex.currentIndex = Math.min(this._map.featureIndex.currentIndex + 1, this._map.featureIndex.inBoundFeatures.length - 1);
+      let nextFocus = this._map.featureIndex.inBoundFeatures[this._map.featureIndex.currentIndex];
+      nextFocus.path.focus();
       this._map.closePopup();
+    },
+
+    getPCRSCenter: function () {
+      let bounds;
+      for(let l in this._layers){
+        let layer = this._layers[l];
+        if (!bounds) {
+          bounds = L.bounds(layer.getPCRSCenter(), layer.getPCRSCenter());
+        } else {
+          bounds.extend(layer.getPCRSCenter());
+        }
+      }
+      return bounds.getCenter();
     },
   });
 
@@ -5902,6 +5930,116 @@
           this.wasDragged = true;
       }
 
+  });
+
+  var FeatureIndex = L.Handler.extend({
+    initialize: function (map) {
+      L.Handler.prototype.initialize.call(this, map);
+      this.inBoundFeatures = [];
+      this.outBoundFeatures = [];
+      this.currentIndex = 0;
+      this._mapPCRSBounds = M.pixelToPCRSBounds(
+        map.getPixelBounds(),
+        map.getZoom(),
+        map.options.projection);
+    },
+
+    addHooks: function () {
+      this._map.on("mapkeyboardfocused", this._updateMapBounds, this);
+      this._map.on('mapkeyboardfocused', this._sortIndex, this);
+    },
+
+    removeHooks: function () {
+      this._map.off("mapkeyboardfocused", this._updateMapBounds);
+      this._map.off('mapkeyboardfocused', this._sortIndex);
+    },
+
+    /**
+     * Adds a svg element to the index of tabbable features, it also keeps track of the layer it's associated + center
+     * @param layer - the layer object the feature is associated with
+     * @param lc - the layer center
+     * @param path - the svg element that needs to be focused, can be a path or g
+     */
+    addToIndex: function (layer, lc, path) {
+      let mc = this._mapPCRSBounds.getCenter();
+      let dist = Math.sqrt(Math.pow(lc.x - mc.x, 2) + Math.pow(lc.y - mc.y, 2));
+      let index = this._mapPCRSBounds.contains(lc) ? this.inBoundFeatures : this.outBoundFeatures;
+
+      let elem = {path: path, layer: layer, center: lc, dist: dist};
+      path.setAttribute("tabindex", -1);
+
+      index.push(elem);
+
+      // TODO: this insertion loop has potential to be improved slightly
+      for (let i = index.length - 1; i > 0 && index[i].dist < index[i-1].dist; i--) {
+        let tmp = index[i];
+        index[i] = index[i-1];
+        index[i-1] = tmp;
+      }
+
+      if (this._mapPCRSBounds.contains(lc))
+        this.inBoundFeatures = index;
+      else
+        this.outBoundFeatures = index;
+    },
+
+    /**
+     * Removes features that are no longer on the map, also moves features to the respective array depending
+     * on whether the feature is in the maps viewport or not
+     */
+    cleanIndex: function() {
+      this.currentIndex = 0;
+      this.inBoundFeatures = this.inBoundFeatures.filter((elem) => {
+        let inbound = this._mapPCRSBounds.contains(elem.center);
+        elem.path.setAttribute("tabindex", -1);
+        if (elem.layer._map && !inbound) {
+          this.outBoundFeatures.push(elem);
+        }
+        return elem.layer._map && inbound;
+      });
+      this.outBoundFeatures = this.outBoundFeatures.filter((elem) => {
+        let inbound = this._mapPCRSBounds.contains(elem.center);
+        elem.path.setAttribute("tabindex", -1);
+        if (elem.layer._map && inbound) {
+          this.inBoundFeatures.push(elem);
+        }
+        return elem.layer._map && !inbound;
+      });
+    },
+
+    /**
+     * Sorts the index of features in the map's viewport based on distance from center
+     * @private
+     */
+    _sortIndex: function() {
+      this.cleanIndex();
+      if(this.inBoundFeatures.length === 0) return;
+
+      let mc = this._mapPCRSBounds.getCenter();
+
+      this.inBoundFeatures.sort(function(a, b) {
+        let ac = a.center;
+        let bc = b.center;
+        a.dist = Math.sqrt(Math.pow(ac.x - mc.x, 2) + Math.pow(ac.y - mc.y, 2));
+        b.dist = Math.sqrt(Math.pow(bc.x - mc.x, 2) + Math.pow(bc.y - mc.y, 2));
+        return a.dist - b.dist;
+      });
+
+      this.inBoundFeatures[0].path.setAttribute("tabindex", 0);
+    },
+
+    /**
+     * Event handler for 'mapfocused' event to update the map's bounds in terms of PCRS
+     * @param e - the event object
+     * @private
+     */
+    _updateMapBounds: function (e) {
+      // TODO: map's PCRS bounds is used in other parts of the viewer, can be moved out to the map object directly
+      this._mapPCRSBounds = M.pixelToPCRSBounds(
+        this._map.getPixelBounds(),
+        this._map.getZoom(),
+        this._map.options.projection);
+    },
   });
 
   var Options = {
@@ -6577,11 +6715,13 @@
   M.QueryHandler = QueryHandler;
   M.ContextMenu = ContextMenu;
   M.AnnounceMovement = AnnounceMovement;
+  M.FeatureIndex = FeatureIndex;
 
   // see https://leafletjs.com/examples/extending/extending-3-controls.html#handlers
   L.Map.addInitHook('addHandler', 'query', M.QueryHandler);
   L.Map.addInitHook('addHandler', 'contextMenu', M.ContextMenu);
   L.Map.addInitHook('addHandler', 'announceMovement', M.AnnounceMovement);
+  L.Map.addInitHook('addHandler', 'featureIndex', M.FeatureIndex);
 
   M.MapMLLayer = MapMLLayer;
   M.mapMLLayer = mapMLLayer;
