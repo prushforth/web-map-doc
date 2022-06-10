@@ -19,7 +19,7 @@
 <body>
     <div style="text-align: center;">
       <!------------------------------------------------- CHANGE THIS ------------------------------------------------->
-      <h2>MapML input step demo: &lt;layer-&gt;</h2>
+      <h2>MapML input demo: &lt;map-input &gt;</h2>
       <button class="run" onclick="plot()" aria-label="run code"><span aria-hidden="true">▶</span></button>
     </div>
 
@@ -34,8 +34,12 @@
 <mapml-viewer projection="OSMTILE" zoom="0" lat="0" lon="0" controls controlslist="nolayer nofullscreen noreload">
   <layer- label="Imagery" checked>
       <map-extent units="OSMTILE">
+        <!-- the zoom step attribute controls the scales at which tiles are requested -->
+        <!-- the zoom min and max attributes establish the range within which tiles may be requested -->
         <map-input type="zoom" step="2" value="18" min="0" max="18" name="TileMatrix"></map-input>
+        <!-- location min / max establish the range along a coordinate axis  between which content may be requested -->
         <map-input name="TileCol" type="location" units="tilematrix" axis="column" min="0" max="262144"></map-input>
+        <!-- the location units and axis attributes establish what coordinate system and axis this input is for -->
         <map-input name="TileRow" type="location" units="tilematrix" axis="row" min="0" max="262144"></map-input>
         <map-link rel="tile" tref="https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/WMTS/tile/1.0.0/World_Imagery/default/default028mm/{TileMatrix}/{TileRow}/{TileCol}.jpg"></map-link>
       </map-extent>
