@@ -1390,9 +1390,7 @@
       },
       onAdd: function () {
         this._map._addZoomLimit(this);
-        var mapml, headers = new Headers({'Accept': 'text/mapml'});
-            var parser = new DOMParser(),
-            opacity = this.options.opacity || 1,
+        var opacity = this.options.opacity || 1,
             container = this._container,
             map = this._map;
         if (!this._features) {
@@ -1415,36 +1413,8 @@
             }
           });
         }
-        // this was tricky...recursion alwasy breaks my brain
-        var features = this._features,
-            _pullFeatureFeed = function (url, limit) {
-              return (fetch (url,{redirect: 'follow',headers: headers})
-                      .then( function (response) {return response.text();})
-                      .then( function (text) {
-                mapml = parser.parseFromString(text,"application/xml");
-                var base = (new URL(mapml.querySelector('map-base') ? mapml.querySelector('map-base').getAttribute('href') : url)).href;
-                url = mapml.querySelector('map-link[rel=next]')? mapml.querySelector('map-link[rel=next]').getAttribute('href') : null;
-                url =  url ? (new URL(url, base)).href: null;
-                let nativeZoom = mapml.querySelector("map-meta[name=zoom]") &&
-                  +M.metaContentToObject(mapml.querySelector("map-meta[name=zoom]").getAttribute("content")).value || 0;
-                let nativeCS = mapml.querySelector("map-meta[name=cs]") &&
-                        M.metaContentToObject(mapml.querySelector("map-meta[name=cs]").getAttribute("content")).content || "GCRS";
-                features.addData(mapml, nativeCS, nativeZoom);
-                if (url && --limit) {
-                  return _pullFeatureFeed(url, limit);
-                }
-              }));
-            };
-          if(map.getZoom() % this._template.step !== 0) {
-              this._onMoveEnd();
-              return;
-          }
-        _pullFeatureFeed(this._getfeaturesUrl(), 10)
-          .then(function() { 
-                map.addLayer(features);
-                map.fire('moveend');  // TODO: replace with moveend handler for layer and not entire map
-          })
-          .catch(function (error) { console.log(error);});
+
+        map.fire('moveend');  // TODO: replace with moveend handler for layer and not entire map
       },
       redraw: function() {
           this._onMoveEnd();
@@ -5147,6 +5117,24 @@
           return new FullscreenButton(options);
       };
 
+  var attributionControl = function (map) {
+      map._attributionControl = map._map.attributionControl.setPrefix(`<button onclick="this.closest(\'.leaflet-container\').querySelector(\'.shortcuts-dialog\').showModal()" class="shortcuts-button mapml-button">${M.options.locale.kbdShortcuts}</button> | <a href="https://www.w3.org/community/maps4html/" title="W3C Maps for HTML Community Group">Maps4HTML</a> | <img src="data:image/svg+xml;base64,PHN2ZyBhcmlhLWhpZGRlbj0idHJ1ZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB3aWR0aD0iMTIiIGhlaWdodD0iOCI+PHBhdGggZmlsbD0iIzRDN0JFMSIgZD0iTTAgMGgxMnY0SDB6Ii8+PHBhdGggZmlsbD0iI0ZGRDUwMCIgZD0iTTAgNGgxMnYzSDB6Ii8+PHBhdGggZmlsbD0iI0UwQkMwMCIgZD0iTTAgN2gxMnYxSDB6Ii8+PC9zdmc+" style="padding-right: 0.3em;" alt="Slava Ukraini"> <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a>`);
+
+      let dialog = document.createElement("dialog");
+      dialog.setAttribute("class", "shortcuts-dialog");
+      dialog.setAttribute("autofocus", "");
+      dialog.onclick = function (e) {
+          e.stopPropagation();
+      };
+      dialog.innerHTML = `<b>${M.options.locale.kbdShortcuts} </b><button aria-label="Close" onclick='this.parentElement.close()'>X</button>` +
+          `<ul><b>${M.options.locale.kbdMovement}</b><li><kbd>&#8593</kbd> ${M.options.locale.kbdPanUp}</li><li><kbd>&#8595</kbd> ${M.options.locale.kbdPanDown}</li><li><kbd>&#8592</kbd> ${M.options.locale.kbdPanLeft}</li><li><kbd>&#8594</kbd> ${M.options.locale.kbdPanRight}</li><li><kbd>+</kbd> ${M.options.locale.btnZoomIn}</li><li><kbd>-</kbd> ${M.options.locale.btnZoomOut}</li><li><kbd>shift</kbd> + <kbd>&#8592/&#8593/&#8594/&#8595</kbd> 3x ${M.options.locale.kbdPanIncrement}</li><li><kbd>ctrl</kbd> + <kbd>&#8592/&#8593/&#8594/&#8595</kbd> 0.2x ${M.options.locale.kbdPanIncrement}</li><li><kbd>shift</kbd> + <kbd>+/-</kbd> ${M.options.locale.kbdZoom}</li></ul>` +
+          `<ul><b>${M.options.locale.kbdFeature}</b><li><kbd>&#8592/&#8593</kbd> ${M.options.locale.kbdPrevFeature}</li><li><kbd>&#8594/&#8595</kbd> ${M.options.locale.kbdNextFeature}</li></ul>`;
+      map._container.appendChild(dialog);
+
+      map._attributionControl.getContainer().setAttribute("role","group");
+      map._attributionControl.getContainer().setAttribute("aria-label","Map data attribution");
+  };
+
   var Crosshair = L.Layer.extend({
     onAdd: function (map) {
 
@@ -5946,36 +5934,48 @@
      * @private
      */
     _handleFocus: function(e) {
-      if((e.keyCode === 9 || e.keyCode === 16 || e.keyCode === 27) && e.type === "keydown"){
+      if(([9, 16, 27, 37, 38, 39, 40].includes(e.keyCode)) && e.type === "keydown"){
         let index = this._map.featureIndex.currentIndex;
-        if(e.keyCode === 9 && e.shiftKey) {
-          if(index === this._map.featureIndex.inBoundFeatures.length - 1)
-            this._map.featureIndex.inBoundFeatures[index].path.setAttribute("tabindex", -1);
-          if(index !== 0){
-            L.DomEvent.stop(e);
+        // Down/right arrow keys replicate tabbing through the feature index
+        // Up/left arrow keys replicate shift-tabbing through the feature index
+        if(e.keyCode === 37 || e.keyCode === 38) {
+          L.DomEvent.stop(e);
+          this._map.featureIndex.inBoundFeatures[index].path.setAttribute("tabindex", -1);
+          if(index === 0) {
+            this._map.featureIndex.inBoundFeatures[this._map.featureIndex.inBoundFeatures.length - 1].path.focus();
+            this._map.featureIndex.currentIndex = this._map.featureIndex.inBoundFeatures.length - 1;
+          } else {
             this._map.featureIndex.inBoundFeatures[index - 1].path.focus();
             this._map.featureIndex.currentIndex--;
           }
-        } else if (e.keyCode === 9) {
-          if(index !== this._map.featureIndex.inBoundFeatures.length - 1) {
-            L.DomEvent.stop(e);
+        } else if (e.keyCode === 39 || e.keyCode === 40) {
+          L.DomEvent.stop(e);
+          this._map.featureIndex.inBoundFeatures[index].path.setAttribute("tabindex", -1);
+          if(index === this._map.featureIndex.inBoundFeatures.length - 1) {
+            this._map.featureIndex.inBoundFeatures[0].path.focus();
+            this._map.featureIndex.currentIndex = 0;
+          } else {
             this._map.featureIndex.inBoundFeatures[index + 1].path.focus();
             this._map.featureIndex.currentIndex++;
-          } else {
-            this._map.featureIndex.inBoundFeatures[0].path.setAttribute("tabindex", -1);
-            this._map.featureIndex.inBoundFeatures[index].path.setAttribute("tabindex", 0);
           }
-        } else if(e.keyCode === 27 && this._map.options.mapEl.shadowRoot.activeElement.nodeName === "g"){
-          this._map.featureIndex.currentIndex = 0;
+        } else if(e.keyCode === 27){
+          let shadowRoot = this._map.options.mapEl.shadowRoot ? this._map.options.mapEl.shadowRoot :
+              this._map.options.mapEl.querySelector(".mapml-web-map").shadowRoot;
+          if(shadowRoot.activeElement.nodeName !== "g") return;
           this._map._container.focus();
+        } else if (e.keyCode === 9) {
+          let obj = this;
+          setTimeout(function () {
+            obj._map.featureIndex.inBoundFeatures[0].path.setAttribute("tabindex", 0);
+          }, 0);
         }
-      } else if (!([9, 16, 13, 27, 49, 50, 51, 52, 53, 54, 55].includes(e.keyCode))){
+      } else if (!([9, 16, 13, 27, 37, 38, 39, 40, 49, 50, 51, 52, 53, 54, 55].includes(e.keyCode))){
         this._map.featureIndex.currentIndex = 0;
         this._map.featureIndex.inBoundFeatures[0].path.focus();
       }
 
       if(e.target.tagName.toUpperCase() !== "G") return;
-      if((e.keyCode === 9 || e.keyCode === 16 || e.keyCode === 13 || (e.keyCode >= 49 && e.keyCode <= 55)) && e.type === "keyup") {
+      if(([9, 13, 16, 37, 38, 39, 40, 49, 50, 51, 52, 53, 54, 55].includes(e.keyCode)) && e.type === "keyup") {
         this.openTooltip();
       } else if (e.keyCode === 13 || e.keyCode === 32){
         this.closeTooltip();
@@ -6272,7 +6272,7 @@
         b.dist = Math.sqrt(Math.pow(bc.x - mc.x, 2) + Math.pow(bc.y - mc.y, 2));
         return a.dist - b.dist;
       });
-      if(!M.options.featureIndexOverlayOption) this.inBoundFeatures[0].path.setAttribute("tabindex", 0);
+      this.inBoundFeatures[0].path.setAttribute("tabindex", 0);
     },
 
     /**
@@ -6318,7 +6318,18 @@
       amEastBound: "Reached east bound, panning east disabled",
       amWestBound: "Reached west bound, panning west disabled",
       amNorthBound: "Reached north bound, panning north disabled",
-      amSouthBound: "Reached south bound, panning south disabled"
+      amSouthBound: "Reached south bound, panning south disabled",
+      kbdShortcuts: "Keyboard shortcuts",
+      kbdMovement: "Movement keys",
+      kbdFeature: "Feature navigation keys",
+      kbdPanUp: "Pan up",
+      kbdPanDown: "Pan down",
+      kbdPanLeft: "Pan left",
+      kbdPanRight: "Pan right",
+      kbdPanIncrement: "pan increment",
+      kbdZoom: "Zoom in/out 3 levels",
+      kbdPrevFeature: "Previous feature",
+      kbdNextFeature: "Next feature",
     }
   };
 
@@ -7211,6 +7222,8 @@
 
   M.FullscreenButton = FullscreenButton;
   M.fullscreenButton = fullscreenButton;
+
+  M.attributionControl = attributionControl;
 
   M.MapMLStaticTileLayer = MapMLStaticTileLayer;
   M.mapMLStaticTileLayer = mapMLStaticTileLayer;
