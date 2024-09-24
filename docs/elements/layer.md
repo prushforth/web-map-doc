@@ -1,7 +1,7 @@
 ---
 id: layer
 title: "<layer->"
-slug: /layers/layer/
+slug: /elements/layer/
 ---
 
 Maps have one or more layers. Map layers are implemented by the `<layer->` custom element.  
@@ -60,6 +60,21 @@ the layer is hidden in the layer control.
 The `label` attribute is used by inline content as the displayed text label of the
 layer in the layer control.  In fetched content, the `label` attribute is ignored,
 and the fetched `<map-title>` element is used.
+
+---
+
+### `media`
+
+The `media` attribute is used to express media conditions under which the layer 
+content should be used / loaded from `src`.  Media conditions evaluate to `true` or `false`.  
+A layer for which the media condition evaluates to `false` is by default hidden.  
+A layer for which the media condition evaluates to `true` is added to the map 
+according to its `checked` attribute, and is added to the layer control according
+to its `hidden` attribute.
+
+Map media queries can include extended CSS map properties including:    
+[projection](../../api/mapml-viewer-api#projection), [zoom](../../api/mapml-viewer-api#zoom), 
+and [extent](../../api/mapml-viewer-api#extent).
 
 ---
 
