@@ -4,7 +4,7 @@ title: "<map-style>"
 slug: /elements/style/
 ---
 
-L’élément `<map-style>` permet aux auteurs de cartes d’intégrer une feuille de style en cascade (CSS) dans les couches de carte. La CSS peut être utilisée pour styliser la géométrie de la couche à l’aide de [`<map-span>`](../../other-elements/span/), ainsi qu’en réglant l’attribut « class » d’après les [éléments enfants](../geometry/#child-elements) de la géométrie.
+L’élément `<map-style>` permet aux auteurs de cartes d’intégrer une feuille de style en cascade (CSS) dans les couches de carte. La CSS peut être utilisée pour styliser la géométrie de la couche à l’aide de [`<map-span>`](../../elements/span/), ainsi qu’en réglant l’attribut « class » d’après les [éléments enfants](../geometry/#éléments-enfants) de la géométrie.
 
 :::note
 
@@ -22,8 +22,8 @@ Toutes les démonstrations comprises dans les pages de documentation contiennent
 
 ```html
 <mapml-viewer projection="OSMTILE" zoom="10" lon="-75.7" lat="45.4" controls>
-  <layer- label="OpenStreetMap" src="../data/osm.mapml" checked></layer->
-  <layer- label="Polygone" checked>
+  <map-layer label="OpenStreetMap" src="../data/osm.mapml" checked></map-layer>
+  <map-layer label="Polygone" checked>
     <map-meta name="projection" content="OSMTILE"></map-meta>
     <map-feature>
       <map-featurecaption>Polygone</map-featurecaption>
@@ -37,7 +37,7 @@ Toutes les démonstrations comprises dans les pages de documentation contiennent
       <map-properties><h2>Il s’agit d’un polygone</h2></map-properties>
     </map-feature>
     <map-style>.hole {stroke: #73A9AD;stroke-width: 4px;fill: none;fill-opacity: 1;}</map-style>
-  </layer->
+  </map-layer>
 </mapml-viewer>
 ```
 
@@ -47,7 +47,7 @@ Toutes les démonstrations comprises dans les pages de documentation contiennent
 
 | Spécification                                                |
 |--------------------------------------------------------------|
-| [Élément MapML « style »](https://maps4html.org/MapML/spec/#styling) |
+| [Élément MapML « style »](https://maps4html.org/MapML-Specification/spec/#styling) |
 | [Élément HTML « style »](https://html.spec.whatwg.org/#the-style-element) |
 
 ---
@@ -73,5 +73,5 @@ Toutes les démonstrations comprises dans les pages de documentation contiennent
 
 ---
 
-> - [Modifier cette page sur **Github**](https://github.com/Maps4HTML/web-map-doc/edit/main/docs/elements/style.md)
+> - [Modifier cette page sur **Github**](https://github.com/Maps4HTML/web-map-doc/edit/main/i18n/fr/docusaurus-plugin-content-docs/current/elements/style.md)
 > - [Discutez avec nous sur **Gitter**](https://gitter.im/Maps4HTML/chat)

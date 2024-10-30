@@ -13,7 +13,7 @@ The `<mapml-viewer>` element is the main element you can use to put a custom Web
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>A Simple Web Map[tm]</title>
-  <script type="module" src="web-map/mapml-viewer.js"></script>
+  <script type="module" src="web-map/mapml.js"></script>
   <style>
     html, body {
     height: 100%; /* These styles are required if you wish to use a % based
@@ -23,7 +23,7 @@ The `<mapml-viewer>` element is the main element you can use to put a custom Web
 </head>
 <body>
   <mapml-viewer projection="OSMTILE" zoom="0" lat="0.0" lon="0.0" controls>
-    <layer- label="OpenStreetMap" src="https://geogratis.gc.ca/mapml/en/osmtile/osm/" checked></layer->
+    <map-layer label="OpenStreetMap" src="https://geogratis.gc.ca/mapml/en/osmtile/osm/" checked></map-layer>
   </mapml-viewer>
 </body>
 </html>    
@@ -52,25 +52,25 @@ The default projection is `OSMTILE`.
 
   - `APSTILE` is based on the Alaska Polar Stereographic (EPSG:5936) projected coordinate reference system, and has 20 zoom levels (0 to 19).
 
-  - other projections are possible, using the [Custom Projections API](../../api/custom-projections).
+  - other projections are possible, using the [Custom Projections API](../../api/mapml-viewer-api/#definecustomprojectionoptions).
 
 ---
 
 ### `zoom`
 
-`zoom` - a non-negative integer.  The value establishes the initial zoom level of the map.  For a small scale view of the world, use a lower value.  Use larger values for larger scales (smaller area maps). The maximum value depends on the particular `projection` and data source. Many map data sources have limited zoom levels available.
+`zoom` - a non-negative integer.  The value establishes the _initial_ zoom level of the map, and is required. The value is updated when the map stops moving. For a smaller scale view of the world, use a lower value.  Use larger values for larger scales (smaller area maps). The maximum value depends on the particular `projection` and data source. Many map data sources have limited zoom levels available.
 
 ---
 
 ### `lat`
 
-`lat` - a real number latitude. The value establishes the initial latitude of the of the center of the map. Latitudes on Earth range from -90.0 (south) to 90.0 (north).  Many projections are not able to display all latitudes, and most projections have a limited range of locations where distortion is controlled or limited. In particular, OSMTILE (Web Mercator) can only display content between the latitude range -84 to 84.
+`lat` - a real number latitude. The value establishes the _initial_ latitude of the of the center of the map, and is required. The value is updated when the map stops moving. Latitudes on Earth range from -90.0 (south) to 90.0 (north).  Many projections are not able to display all latitudes, and most projections have a limited range of locations where distortion is controlled or limited. In particular, OSMTILE (Web Mercator) can only display content between the latitude range -84 to 84.
 
 ---
 
 ### `lon`
 
-`lon` - a real number longitude. The value establishes the initial longitude of the of the center of the map.Longitudes on Earth range from -180.0 (west) to 180.0 (east). Similar comments related to distortion apply to those for latitude. Be careful, this attribute is named "lon" NOT "long", and if you use "long" your map won't work properly.
+`lon` - a real number longitude. The value establishes the _initial_ longitude of the of the center of the map, and is required. The value is updated when the map stops moving. Longitudes on Earth range from -180.0 (west) to 180.0 (east). Similar comments related to distortion apply to those for latitude. Be careful, this attribute is named "lon" NOT "long", and if you use "long" your map won't work properly.
 
 ---
 
@@ -82,7 +82,26 @@ The default projection is `OSMTILE`.
 
 ### `controlslist`
 
-`controlslist` - an enumerated attribute, possible values are: "`nofullscreen`", "`nolayer`", "`noreload`" and "`nozoom`".  Occasionally, you may not want your users to have access to a particular control, so you may prune the set of controls automatically presented (when you have used the `controls` boolean attribute).
+`controlslist` - an enumerated attribute, possible values are: "`nofullscreen`", "`nolayer`", "`noreload`", "`noscale`" and "`nozoom`".  Occasionally, you may not want your users to have access to a particular control, so you may prune the set of controls automatically presented (when you have used the `controls` boolean attribute).
+
+---
+
+### `height`
+
+`height` - the height of the map, in pixels. Must be an integer without a unit.
+
+---
+
+### `width`
+
+`width` - the width of the map, in pixels. Must be an integer without a unit.
+
+---
+
+### `static`
+
+`static` - a "boolean" attribute. It disables the keyboard interaction, and the zooming and dragging features with the map when it is 
+present. When it is not present or removed, these features are enabled again.
 
 ---
 
@@ -90,7 +109,7 @@ The default projection is `OSMTILE`.
 
 | Specification                                                |
 |--------------------------------------------------------------|
-| [MapML map element](https://maps4html.org/MapML/spec/#the-map-element-0) |
+| [MapML map element](https://maps4html.org/MapML-Specification/spec/#the-mapml-viewer-element-0) |
 | [HTML map element](https://html.spec.whatwg.org/multipage/image-maps.html#the-map-element) |
 
 ---
@@ -108,7 +127,7 @@ The default projection is `OSMTILE`.
 |  | Spec | Viewer | API |
 |:---------------------------------------------------------------------------------|:------: |:-----: |:---: |
 | [**Rendering base layers (5.1)**](https://maps4html.org/HTML-Map-Element-UseCases-Requirements/#map-viewers-capabilities-rendering) |  |  |  |
-|              <div class="requirement">Embed an interactive map viewer, using HTML markup (5.1.1)</div>           | [full](https://maps4html.org/MapML/spec/#the-map-element-0) | full | [full](https://maps4html.org/MapML/spec/#webidl-1442763376) |
+|              <div class="requirement">Embed an interactive map viewer, using HTML markup (5.1.1)</div>           | [full](https://maps4html.org/MapML-Specification/spec/#the-map-element-0) | full | [full](https://maps4html.org/MapML-Specification/spec/#webidl-1442763376) |
 |              <div class="enhancement">Generate a default map for a given area (5.1.2)</div>           | Not Planned | Not Planned | Not Planned |
 |            <div class="requirement">Display a basic map without JavaScript (5.1.5)</div>             | full | [limited](https://maps4html.org/experiments/progressive-enhancement/) |  |
 |            <div class="requirement">Display map content in a users preferred language (5.1.6)</div>            | [full](https://github.com/Maps4HTML/HTML-Map-Element-UseCases-Requirements/issues/136) | [full](https://github.com/Maps4HTML/mapml-extension) |  |

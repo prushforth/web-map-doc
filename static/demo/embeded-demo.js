@@ -29,10 +29,10 @@ function plot() {
     // CSS Parsing and implementing
     let rawTextCSS = cssEditor.getValue();
 
-    let mapmlCSS = parser.parseFromString("<map-style>" + rawTextCSS + "</map-style>", "text/xml").querySelector('map-style');
+    let mapmlCSS = parser.parseFromString("<map-style>" + rawTextCSS + "</map-style>", "text/html").querySelector('map-style');
 
     // Adding the CSS to each layer
-    let layers = mapml.querySelectorAll('layer-');
+    let layers = mapml.querySelectorAll('map-layer');
     for (i = 0; i < layers.length; ++i) {
         layers[i].appendChild(mapmlCSS);
     }
@@ -53,9 +53,9 @@ window.onload = (event) => {
 
     // CSS Parsing and implementing
     let rawTextCSS = cssEditor.getValue();
-    let mapmlCSS = parser.parseFromString("<map-style>" + rawTextCSS + "</map-style>", "text/xml").querySelector('map-style');
+    let mapmlCSS = parser.parseFromString("<map-style>" + rawTextCSS + "</map-style>", "text/html").querySelector('map-style');
     // Adding the CSS to each layer
-    let layers = mapml.querySelectorAll('layer-');
+    let layers = mapml.querySelectorAll('map-layer');
     for (i = 0; i < layers.length; ++i) {
         layers[i].appendChild(mapmlCSS);
     }

@@ -23,6 +23,14 @@ a {
   text-decoration: underline;
 }
 
+.badge {
+    border: 1px solid #cfc5c5;
+    border-radius: 4rem;
+    font-size: 0.694rem;
+    padding: .125rem .375rem;
+    white-space: nowrap;
+    color: #1e1c1d;
+}
 .menu a,
 .navbar a,
 .pagination-nav a,
@@ -31,7 +39,13 @@ a {
 }
 
 .docusaurus-highlight-code-line {
-  background-color: rgb(72, 77, 91);
+  background-color: rgb(242, 222, 222);
+  display: block;
+  margin: 0 calc(-1 * var(--ifm-pre-padding));
+  padding: 0 var(--ifm-pre-padding);
+}
+[data-theme='dark'] .docusaurus-highlight-code-line {
+  background-color: rgb(100, 100, 100);
   display: block;
   margin: 0 calc(-1 * var(--ifm-pre-padding));
   padding: 0 var(--ifm-pre-padding);
@@ -50,7 +64,7 @@ p, li, dt, dd, figcaption {
 }
 
 /* Fix Docusaurus tabbing issues */
-@media (max-width: 996px) {
+/*@media (max-width: 996px) {
   .navbar--fixed-top:not(.navbar-sidebar--show) .navbar-sidebar__items {
     display: none;
   }
@@ -63,7 +77,7 @@ p, li, dt, dd, figcaption {
   .navbar-sidebar {
     display: none;
   }
-}
+}*/
 body {
   overflow-y: auto!important;
 }

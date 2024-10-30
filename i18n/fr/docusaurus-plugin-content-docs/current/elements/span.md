@@ -1,7 +1,7 @@
 ---
 id: span
 title: "<map-span>"
-slug: /other-elements/span/
+slug: /elements/span/
 ---
 
 L’élément `<map-span>` est utile lorsqu’il est utilisé avec des attributs HTML généraux comme [class](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/class). Cet élément permet d’encapsuler les paires de coordonnées dans un élément `<map-coordinates>`, ce qui permet aux coordonnées encapsulées d’être ciblées par les sélecteurs des feuilles de style en cascade (CSS) et donc d’être stylisées de manière indépendante.
@@ -16,8 +16,8 @@ L’élément `<map-span>` est utile lorsqu’il est utilisé avec des attributs
 
 ```html
 <mapml-viewer projection="OSMTILE" zoom="10" lon="-75.7" lat="45.4" controls>
-  <layer- label="OpenStreetMap" src="../data/osm.mapml" checked></layer->
-  <layer- label="Polygone" checked>
+  <map-layer label="OpenStreetMap" src="../data/osm.mapml" checked></map-layer>
+  <map-layer label="Polygone" checked>
     <map-meta name="projection" content="OSMTILE"></map-meta>
     <map-feature>
       <map-featurecaption>Polygone</map-featurecaption>
@@ -30,7 +30,7 @@ L’élément `<map-span>` est utile lorsqu’il est utilisé avec des attributs
       </map-geometry>
       <map-properties><h2>Il s’agit d’un polygone</h2></map-properties>
     </map-feature>
-  </layer->
+  </map-layer>
 </mapml-viewer>
 ```
 
@@ -44,5 +44,5 @@ L’élément `<map-span>` est utile lorsqu’il est utilisé avec des attributs
 
 ---
 
-> - [Modifier cette page sur **Github**](https://github.com/Maps4HTML/web-map-doc/edit/main/docs/elements/span.md)
+> - [Modifier cette page sur **Github**](https://github.com/Maps4HTML/web-map-doc/edit/main/i18n/fr/docusaurus-plugin-content-docs/current/elements/span.md)
 > - [Discutez avec nous sur **Gitter**](https://gitter.im/Maps4HTML/chat)

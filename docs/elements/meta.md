@@ -29,10 +29,30 @@ values of `name` related to maps include:
 
 | `name`          | `content` value                                          	  |
 |--------------	|--------------------------------------------------------	|
-| projection    | A case-sensitive [projection name](../mapml-viewer#projection), or a [custom projection name](../../api/custom-projections#details) |
+| projection    | A case-sensitive [projection name](../mapml-viewer#projection), or a [custom projection name](../../api/mapml-viewer-api#definecustomprojectionoptions) |
 | extent        | \(\(_[position keyword](../input#position)_\)-\(_[axis name](../input#axis)_\)=\(_axis value_\)\(,\)\)4\(,\)\(zoom=\(_zoom value_\)\)0,1 |
 | cs            | A case-sensitive [coordinate system abbreviation](../input#units). |
 | zoom          | (min=_minimum zoom value_,max=_maximum zoom value_,)(value=_current zoom value_) |
+
+:::tip
+
+The grammar rules for the `<map-meta name="extent" content="..."></map-meta>`
+`content` attribute require that you specify coordinates of the top-left and 
+bottom-right corners of the extent being marked up. You must specify the axis values of the 
+extent as values for a set of four comma-separated keys which identify the coordinate
+system being used (i.e. pcrs, gcrs, tile, tilematrix, map or tcrs) by virtue of 
+the axis names. For example `top-left-easting=-8433179` identifies that the 
+coordinate system being used is pcrs.  You cannot mix coordinate systems within 
+a single `content` attribute value, for example `top-left-easting=-8433179, top-left-latitude=49.02174,...`
+is not legal.
+
+You can copy a correctly marked-up `<map-meta name="extent" content="...">` value 
+onto the clipboard for the current map viewport, in pcrs coordinates (by default), 
+via the map context menu Copy > Extent item as shown below:
+
+![Copy extent context menu](../assets/img/map-context-menu-copy-extent.png)
+
+:::
 
 ---
 
@@ -41,7 +61,7 @@ values of `name` related to maps include:
 | [Content categories](https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Content_categories) | [Metadata content](https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Content_categories#metadata_content) |
 | Permitted content | None, it is an [empty element](https://developer.mozilla.org/en-US/docs/Glossary/Empty_element).  |
 | Tag omission | While the HTML `<meta>` element is a void element, the polyfill `<map-link>` must have an end tag. |
-| Permitted parents | Inline: the `<layer->` element. In a MapML document: the `<map-head>` element. |
+| Permitted parents | Inline: the `<map-layer>` element. In a MapML document: the `<map-head>` element. |
 | Implicit ARIA role   | [No corresponding role](https://www.w3.org/TR/html-aria/#dfn-no-corresponding-role) |
 | Permitted ARIA roles | No role permitted |
 | DOM interface | [HTMLMetaElement extension](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMetaElement) |
@@ -58,7 +78,7 @@ by the `<map-geometry cs="gcrs">` attribute, which tells the polyfill how to par
 process strings of coordinates found in descendant `<map-coordinates>` elements.
 
 ```html
-<layer- label="Favourite Restaurant" checked>
+<map-layer label="Favourite Restaurant" checked>
   <map-meta name="projection" content="OSMTILE"></map-meta>
   <map-meta name="zoom" content="min=0,max=22,value=3"></map-meta>
   <map-feature>
@@ -69,7 +89,7 @@ process strings of coordinates found in descendant `<map-coordinates>` elements.
           </map-point>
       </map-geometry>
   </map-feature>
-</layer->
+</map-layer>
 ```
 
 ### Setting extent
@@ -78,7 +98,7 @@ Using the `<map-meta>` element to establish the pcrs (easting,northing) **extent
 a map layer, the coordinates of which are encoded as gcrs pairs. 
 
 ```html
-<layer- label="Favourite Restaurant" checked>
+<map-layer label="Favourite Restaurant" checked>
   <map-meta name="projection" content="OSMTILE"></map-meta>
   <map-meta name="zoom" content="min=0,max=22,value=3"></map-meta>
   <map-meta name="extent" content="top-left-easting=-8433179, top-left-northing=5689316, bottom-right-easting=-8420968,bottom-right-northing=5683139"></map-meta>
@@ -90,7 +110,7 @@ a map layer, the coordinates of which are encoded as gcrs pairs.
           </map-point>
       </map-geometry>
   </map-feature>
-</layer->
+</map-layer>
 ```
 
 ### Fallback cs for &lt;map-geometry&gt;
@@ -104,7 +124,7 @@ at which the feature should be displayed is not specified, nor the extent. Both
 values will fall back to the default values for the projection. 
 
 ```html
-<layer- label="Favourite Restaurant" checked>
+<map-layer label="Favourite Restaurant" checked>
   <map-meta name="projection" content="OSMTILE"></map-meta>
   <map-meta name="cs" content="gcrs" ></map-meta>
   <map-feature>
@@ -115,7 +135,7 @@ values will fall back to the default values for the projection.
           </map-point>
       </map-geometry>
   </map-feature>
-</layer->
+</map-layer>
 ```
 
 ### Default metadata
@@ -126,7 +146,7 @@ interpreted to be `gcrs` (longitude latitude).  The extent of the layer defaults
 to that of the projection.
 
 ```html
-<layer- label="Favourite Restaurant" checked>
+<map-layer label="Favourite Restaurant" checked>
   <map-feature>
     <map-featurecaption>Big Daddy's Crab Shack</map-featurecaption>
       <map-geometry>
@@ -135,7 +155,7 @@ to that of the projection.
           </map-point>
       </map-geometry>
   </map-feature>
-</layer->
+</map-layer>
 ```
 
 ---
@@ -144,7 +164,7 @@ to that of the projection.
 
 | Specification                                                |
 |--------------------------------------------------------------|
-| [MapML meta element](https://maps4html.org/MapML/spec/#the-meta-element-0) |
+| [MapML meta element](https://maps4html.org/MapML-Specification/spec/#the-meta-element-0) |
 | [HTML meta element](https://html.spec.whatwg.org/multipage/semantics.html#the-meta-element) |
 ---
 

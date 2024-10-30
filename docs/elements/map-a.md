@@ -1,7 +1,7 @@
 ---
 id: map-a
 title: "<map-a>"
-slug: /other-elements/map-a/
+slug: /elements/map-a/
 ---
 
 The `<map-a>` element is a proposal to extend the Web to include links between maps and locations.
@@ -78,7 +78,7 @@ To style linked features simply target the `map-a` class in your CSS, once a lin
 `map-a-visited` class. See the example below:
 
 ```html
-<layer->
+<map-layer>
   <map-style>
     .map-a {
       stroke: red;
@@ -99,7 +99,7 @@ To style linked features simply target the `map-a` class in your CSS, once a lin
       </map-a>
     </map-geometry>
   </map-feature>
-</layer->
+</map-layer>
 ```
 
 ### Wrapping a Feature Type + Location Fragment 

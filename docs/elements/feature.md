@@ -7,14 +7,39 @@ Map [features](https://en.wikipedia.org/wiki/Geographical_feature) are real or i
 
 Map features are represented in HTML MapML using a `<map-feature>` element, which is rendered on the map through translation to SVG. This allows the feature to scale without distortion, as you zoom in and out. 
 
-A `<map-feature>` element is a container for a feature's accessible name (`<map-featurecaption>`), scalar properties (`<map-properties>`) and its geometry (`<map-geometry>`).  The `<map-feature>` element can be modeled as inline HTML content as a child of the `<layer->` element, or in an XHTML MapML document, as a child of the `<map-body>` element.
+A `<map-feature>` element is a container for a feature's accessible name (`<map-featurecaption>`), scalar properties (`<map-properties>`) and its geometry (`<map-geometry>`).  The `<map-feature>` element can be modeled as inline HTML content as a child of the `<map-layer>` element, or in an XHTML MapML document, as a child of the `<map-body>` element.
 
 <iframe src="../../../demo/map-feature-demo/" title="MapML Demo" height="410" width="100%" scrolling="no" frameBorder="0"></iframe>
 
 ## Attributes
 
 ### `zoom`
-  - This allows you to set the zoom level the feature is rendered at. The zoom value should fall within the range of 0 to the maximum zoom level of the map's [projection](../meta/#attributes).
+
+This allows you to set the zoom level the feature is rendered at. The zoom value 
+should fall within the range of 0 to the maximum zoom level of the map's 
+[projection](../meta/#attributes).
+
+### `min`
+
+The `min` (zoom) attribute gets or sets the native minimum zoom of the feature.
+Map features' geometry and other properties are scale-dependent. The `min` value 
+is a rendering zoom value cut-off; at map zoom values less than `min`, the feature 
+will not be rendered. 
+
+If `min` is not provided, a fallback value will be calculated; the fallback value
+will be the minimum zoom value of the layer, or if that is not specified, of the 
+map viewer `projection`'s minimum value i.e. 0.
+
+### `max`
+
+The `max` (zoom) attribute gets or sets the native maximum zoom of the feature.
+Map features' geometry and other properties are scale-dependent. The `max` value 
+is a rendering zoom value cut-off; at map zoom values greater than `max`, the 
+feature will not be rendered. 
+
+If `max` is not provided, a fallback value will be calculated; the fallback value
+will be the maximum zoom value of the layer, or if that is not specified, of the 
+map viewer `projection`'s maximum value e.g. 25 (depending on the projection).
 
 ---
 
@@ -95,7 +120,7 @@ Sets the [extent](../meta/#attributes) of the layer.
   <mapml-viewer projection="CBMTILE" zoom="2" lat="45.5052040" lon="-75.2202344"
     controls>
 
-    <layer- label="Arizona" checked>
+    <map-layer label="Arizona" checked>
       <map-meta name="projection" content="CBMTILE"></map-meta>
       <map-meta name="zoom" content="min=1,max=5,value=0"></map-meta>
       <map-meta name="cs" content="gcrs"></map-meta>
@@ -152,13 +177,13 @@ Sets the [extent](../meta/#attributes) of the layer.
           </map-polygon>
         </map-geometry>
       </map-feature>
-    </layer->
+    </map-layer>
   </mapml-viewer>
 ```
 ### An inline HTML map-feature
 
 ```html
-<layer- label="My Feature Layer" checked>
+<map-layer label="My Feature Layer" checked>
     <map-feature id="mem35059" zoom="17">
       <map-properties>
         <table>
@@ -185,13 +210,13 @@ Sets the [extent](../meta/#attributes) of the layer.
         </map-point>
       </map-geometry>
     </map-feature>
-</layer->
+</map-layer>
 ```
 
 ### A map-feature in a fetched XHTML MapML document
 
 ```html
-<layer- label="My Feature Layer" src="https://example.org/mem/35059.mapml"></layer->
+<map-layer label="My Feature Layer" src="https://example.org/mem/35059.mapml"></map-layer>
 ```
 
 ### 35059.mapml:
@@ -243,7 +268,7 @@ Sets the [extent](../meta/#attributes) of the layer.
 
 | Specification                                                |
 |--------------------------------------------------------------|
-| [MapML feature element](https://maps4html.org/MapML/spec/#the-feature-element-0) |
+| [MapML feature element](https://maps4html.org/MapML-Specification/spec/#the-feature-element-0) |
 
 ---
 
@@ -263,7 +288,7 @@ Sets the [extent](../meta/#attributes) of the layer.
 |                         <div class="requirement">Show pinpoint locations or custom markers on the map (5.2.1)</div>                        | full | full |	 |
 | <div class="requirement">Draw polygons or polylines as stylable, interactive vector graphics (separate from the image tiles) (5.2.2)</div> | full | full |  |
 | [**User navigation (pan and zoom) (5.4)**](https://maps4html.org/HTML-Map-Element-UseCases-Requirements/#map-viewers-capabilities-user-navigation) |  |  |  |
-| <div class="discussion">Hide or show (and maybe dynamically load) vector features and labels on zoom (5.4.7)</div> | [full](https://maps4html.org/MapML/spec/#the-feature-element-0) | [experimental](https://maps4html.org/web-map-doc/docs/elements/feature/#full-examples) |  |
+| <div class="discussion">Hide or show (and maybe dynamically load) vector features and labels on zoom (5.4.7)</div> | [full](https://maps4html.org/MapML-Specification/spec/#the-feature-element-0) | [experimental](https://maps4html.org/web-map-doc/docs/elements/feature/#full-examples) |  |
 | [**Custom styling (5.5)**](https://maps4html.org/HTML-Map-Element-UseCases-Requirements/#map-viewers-capabilities-custom-styling) |  |  |  |
 |          <div class="undecided">Apply custom styling to map markers and vector features (5.5.1)</div>              | [full](https://github.com/Maps4HTML/HTML-Map-Element-UseCases-Requirements/issues/15) | limited |  |
 ---

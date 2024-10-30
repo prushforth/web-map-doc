@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Demo</title>
-    <script type="module" src="../../dist/mapml-viewer.js"></script>
+    <script type="module" src="../../dist/mapml.js"></script>
     <link rel="stylesheet" href="../embeded-demo-style.css"/>
     
     <link rel="stylesheet" href="../codemirror-5.64.0/lib/codemirror.css">
@@ -31,15 +31,15 @@
     <div class="tabcontent" id="HTML">
         <!------------------------------------------------- CHANGE THIS ------------------------------------------------->
         <textarea rows="10" style="width:100%" id="htmlEditor">
-<mapml-viewer projection="OSMTILE" lat="10" lon="0" zoom="1">
-  <layer- label="OpenStreetMap" checked>
-    <map-extent units="OSMTILE">
+<mapml-viewer projection="OSMTILE" lat="10" lon="0" zoom="1" controls>
+  <map-layer label="OpenStreetMap" checked>
+    <map-extent units="OSMTILE" checked>
       <map-input name="z" type="zoom" value="18" min="0" max="18"></map-input>
       <map-input name="x" type="location" units="tilematrix" axis="column" min="0" max="262144"></map-input>
       <map-input name="y" type="location" units="tilematrix" axis="row" min="0" max="262144"></map-input>
       <map-link rel="tile" tref="https://tile.openstreetmap.org/{z}/{x}/{y}.png"></map-link>
     </map-extent>
-  </layer->
+  </map-layer>
 </mapml-viewer></textarea>
     </div>
     <div class="tabcontent" id="CSS">

@@ -28,11 +28,32 @@ L’attribut `name` indique le type de métadonnées définies. Les valeurs poss
 
 | `name`          | `content` valeur                                          	  |
 |--------------	|--------------------------------------------------------	|
-| projection    | [Nom de la projection] sensible à la casse (../mapml-viewer#projection), ou [nom de la projection personnalisée](../../api/custom-projections#details) |
+| projection    | [Nom de la projection] sensible à la casse (../mapml-viewer#projection), ou [nom de la projection personnalisée](../../api/mapml-viewer-api#definecustomprojectionoptions) |
 | extent        | \(\(_[position keyword](../input#position)_\)-\(_[axis name](../input#axis)_\)=\(_axis value_\)\(,\)\)4\(,\)\(zoom=\(_zoom value_\)\)0,1 |
 | cs            | [Abréviation du système de coordonnées] sensible à la casse](../input#units). |
 | zoom          | (min=_valeur de zoom minimale_,max=_valeur de zoom maximale_,)(value=_valeur de zoom actuelle_) |
 
+:::tip
+
+Les règles de grammaire de l'attribut `<map-meta name="extent" content="..."></map-meta>` 
+`content` exigent que vous spécifiiez les coordonnées des coins supérieur gauche 
+et inférieur droit de l'étendue à marquer. Vous devez spécifier les valeurs d'axe 
+de l'étendue en tant que valeurs pour un ensemble de quatre clés séparées par des 
+virgules qui identifient le système de coordonnées utilisé (c'est-à-dire pcrs, gcrs, 
+tile, tilematrix, map ou tcrs) en vertu des noms d'axe suivants des noms d'axes. 
+Par exemple, `top-left-easting=-8433179` indique que le système de coordonnées 
+utilisé est pcrs.
+
+Vous ne pouvez pas confondre les systèmes de coordonnées dans une même valeur 
+d'attribut `content`, par exemple `top-left-easting=-8433179, top-left-latitude=49.02174,...` 
+n'est pas légal. Vous pouvez copier une valeur `<map-meta name="extent" content="...">` 
+correctement marquée dans la planchette à pince pour la fenêtre de visualisation 
+actuelle de la carte, en coordonnées pcrs (par défaut), grâce au menu contextuel 
+de la carte Copier > Étendue, comme indiqué ci-dessous :
+
+![Copy extent context menu](../assets/img/map-context-menu-copy-extent.png)
+
+:::
 ---
 
 | <!-- -->    | <!-- -->    |
@@ -40,7 +61,7 @@ L’attribut `name` indique le type de métadonnées définies. Les valeurs poss
 | [Catégories de contenu](https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Content_categories) | [Contenu de métadonnées](https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Content_categories#metadata_content) |
 | Contenu autorisé | Aucun, il s’agit d’un [élément vide](https://developer.mozilla.org/en-US/docs/Glossary/Empty_element).  |
 | Omission de balises | Bien que l’élément HTML `<meta>` soit un élément vide, le polyfill `<map-link>` doit avoir une balise de fin. |
-| Parents autorisés | En ligne : élément `<layer->`. Dans un document MapML : élément `<map-head>`. |
+| Parents autorisés | En ligne : élément `<map-layer>`. Dans un document MapML : élément `<map-head>`. |
 | Rôle ARIA implicite | [Aucun rôle correspondant](https://www.w3.org/TR/html-aria/#dfn-no-corresponding-role) |
 | Rôles ARIA autorisés | Aucun rôle autorisé |
 | DOM interface | [HTMLMetaElement extension](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMetaElement) |
@@ -57,7 +78,7 @@ Le codage des coordonnées de l’entité est strictement déterminé par l’at
 
 
 ```html
-<layer- label="Restaurant préféré" checked>
+<map-layer label="Restaurant préféré" checked>
   <map-meta name="projection" content="OSMTILE"></map-meta>
   <map-meta name="zoom" content="min=0,max=22,value=3"></map-meta>
   <map-feature>
@@ -68,7 +89,7 @@ Le codage des coordonnées de l’entité est strictement déterminé par l’at
           </map-point>
       </map-geometry>
   </map-feature>
-</layer->
+</map-layer>
 ```
 
 ### Réglage de la portée 
@@ -77,7 +98,7 @@ Utiliser l’élément `<map-meta>` pour établir la **portée** pcrs (easting,n
  
 
 ```html
-<layer- label="Restaurant préféré" checked>
+<map-layer label="Restaurant préféré" checked>
   <map-meta name="projection" content="OSMTILE"></map-meta>
   <map-meta name="zoom" content="min=0,max=22,value=3"></map-meta>
   <map-meta name="extent" content="top-left-easting=-8433179, top-left-northing=5689316, bottom-right-easting=-8420968,bottom-right-northing=5683139"></map-meta>
@@ -89,7 +110,7 @@ Utiliser l’élément `<map-meta>` pour établir la **portée** pcrs (easting,n
           </map-point>
       </map-geometry>
   </map-feature>
-</layer->
+</map-layer>
 ```
 
 ### Variable alternative cs pour &lt;map-geometry&gt;
@@ -101,7 +122,7 @@ Ces deux valeurs reviendront aux valeurs par défaut de la projection.
  
 
 ```html
-<layer- label="Restaurant préféré" checked>
+<map-layer label="Restaurant préféré" checked>
   <map-meta name="projection" content="OSMTILE"></map-meta>
   <map-meta name="cs" content="gcrs" ></map-meta>
   <map-feature>
@@ -112,7 +133,7 @@ Ces deux valeurs reviendront aux valeurs par défaut de la projection.
           </map-point>
       </map-geometry>
   </map-feature>
-</layer->
+</map-layer>
 ```
 
 ### Métadonnées par défaut
@@ -123,7 +144,7 @@ La portée de la couche correspond par défaut à celle de la projection.
 
 
 ```html
-<layer- label="Restaurant préféré" checked>
+<map-layer label="Restaurant préféré" checked>
   <map-feature>
     <map-featurecaption>Big Daddy's Crab Shack</map-featurecaption>
       <map-geometry>
@@ -132,7 +153,7 @@ La portée de la couche correspond par défaut à celle de la projection.
           </map-point>
       </map-geometry>
   </map-feature>
-</layer->
+</map-layer>
 ```
 
 ---
@@ -141,7 +162,7 @@ La portée de la couche correspond par défaut à celle de la projection.
 
 | Spécification                                                |
 |--------------------------------------------------------------|
-| [Élément MapML « meta »](https://maps4html.org/MapML/spec/#the-meta-element-0) |
+| [Élément MapML « meta »](https://maps4html.org/MapML-Specification/spec/#the-meta-element-0) |
 | [Élément HTML « meta »](https://html.spec.whatwg.org/multipage/semantics.html#the-meta-element) |
 ---
 
@@ -158,6 +179,6 @@ Les exigences doivent être consignées.
 
 ---
 
-> - [Modifier cette page sur **Github**](https://github.com/Maps4HTML/web-map-doc/edit/main/docs/elements/meta.md)
+> - [Modifier cette page sur **Github**](https://github.com/Maps4HTML/web-map-doc/edit/main/i18n/fr/docusaurus-plugin-content-docs/current/elements/meta.md)
 > - [Discutez avec nous sur **Gitter**](https://gitter.im/Maps4HTML/chat)
 

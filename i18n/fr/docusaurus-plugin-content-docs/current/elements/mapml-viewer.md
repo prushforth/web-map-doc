@@ -13,7 +13,7 @@ L’élément `<mapml-viewer>` est le principal élément à utiliser pour ajout
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Carte Web simple [carte topographique]</title>
-  <script type="module" src="web-map/mapml-viewer.js"></script>
+  <script type="module" src="web-map/mapml.js"></script>
   <style>
     html, body {
     height: 100%; /* Ces styles sont nécessaires si vous souhaitez utiliser une valeur de hauteur basée sur un pourcentage pour l’élément « mapml-viewer ». */
@@ -22,7 +22,7 @@ L’élément `<mapml-viewer>` est le principal élément à utiliser pour ajout
 </head>
 <body>
   <mapml-viewer projection="OSMTILE" zoom="0" lat="0.0" lon="0.0" controls>
-    <layer- label="OpenStreetMap" src="https://geogratis.gc.ca/mapml/en/osmtile/osm/" checked></layer->
+    <map-layer label="OpenStreetMap" src="https://geogratis.gc.ca/mapml/en/osmtile/osm/" checked></map-layer>
   </mapml-viewer>
 </body>
 </html>    
@@ -51,25 +51,25 @@ La projection par défaut est `OSMTILE`.
 
   - `APSTILE` est basé sur le système de projection stéréographique polaire de l’Alaska (EPSG:5936), et compte 20 niveaux de zoom (de 0 à 19).
 
-  - D’autres projections sont possibles, au moyen d’[API de projections personnalisées](../../api/custom-projections).
+  - D’autres projections sont possibles, au moyen d’[API de projections personnalisées](../../api/mapml-viewer-api/#definecustomprojectionoptions).
 
 ---
 
 ### `zoom`
 
-`zoom` - entier non négatif. Cette valeur établit le niveau de zoom initial de la carte. Pour obtenir une vue du monde à petite échelle, utilisez une valeur faible. Utilisez des valeurs supérieures pour obtenir une vue à grande échelle (cartes de petites zones). La valeur maximale dépend de la `projection` en question et de la source des données. Bon nombre des sources de données cartographiques offrent des niveaux de zoom limités.
+`zoom` - entier non négatif. Cette valeur définit le niveau de zoom initial de la carte et est obligatoire. La valeur est mise à jour lorsque la carte cesse de se déplacer. Pour obtenir une vue du monde à petite échelle, utilisez une valeur faible. Utilisez des valeurs supérieures pour obtenir une vue à grande échelle (cartes de petites zones). La valeur maximale dépend de la `projection` en question et de la source des données. Bon nombre des sources de données cartographiques offrent des niveaux de zoom limités.
 
 ---
 
 ### `lat`
 
-`lat` - nombre réel de la latitude. Cette valeur établit la latitude initiale du centre de la carte. Sur Terre, les latitudes vont de -90.0 (Sud) à 90.0 (Nord).  De nombreuses projections ne permettent pas d’afficher toutes les latitudes et la plupart permettent de contrôler ou de limiter la distorsion dans un certain nombre d’emplacements. En particulier, OSMTILE (Web Mercator) peut afficher seulement le contenu compris entre les latitudes -84 à 84.
+`lat` - nombre réel de la latitude. Cette valeur établit la latitude initiale du centre de la carte. La valeur est mise à jour lorsque la carte cesse de se déplacer. Sur Terre, les latitudes vont de -90.0 (Sud) à 90.0 (Nord).  De nombreuses projections ne permettent pas d’afficher toutes les latitudes et la plupart permettent de contrôler ou de limiter la distorsion dans un certain nombre d’emplacements. En particulier, OSMTILE (Web Mercator) peut afficher seulement le contenu compris entre les latitudes -84 à 84.
 
 ---
 
 ### `lon`
 
-`lon` - nombre réel de la longitude. Cette valeur établit la longitude initiale du centre de la carte. Sur Terre, les longitudes vont de -180.0 (Ouest) à 180.0 (Est). Les mêmes commentaires formulés précédemment concernant la distorsion s’appliquent. Faites attention, le nom de cet attribut est « lon » et non « long »; votre carte ne fonctionnera pas correctement si vous utilisez « long ».
+`lon` - nombre réel de la longitude. Cette valeur établit la longitude initiale du centre de la carte. La valeur est mise à jour lorsque la carte cesse de se déplacer. Sur Terre, les longitudes vont de -180.0 (Ouest) à 180.0 (Est). Les mêmes commentaires formulés précédemment concernant la distorsion s’appliquent. Faites attention, le nom de cet attribut est « lon » et non « long »; votre carte ne fonctionnera pas correctement si vous utilisez « long ».
 
 ---
 
@@ -81,7 +81,26 @@ La projection par défaut est `OSMTILE`.
 
 ### `controlslist`
 
-`controlslist` - attribut énuméré. Les valeurs possibles sont les suivantes : "`nofullscreen`", "`nolayer`", "`noreload`" et "`nozoom`". Il se peut qu’à l’occasion, vous ne souhaitiez pas que les utilisateurs aient accès à une commande en particulier. Vous pouvez alors réduire l’ensemble des commandes offertes automatiquement (si vous avez utilisé l’attribut booléen `controls` ).
+`controlslist` - attribut énuméré. Les valeurs possibles sont les suivantes : "`nofullscreen`", "`nolayer`", "`noreload`", "`noscale`" et "`nozoom`". Il se peut qu’à l’occasion, vous ne souhaitiez pas que les utilisateurs aient accès à une commande en particulier. Vous pouvez alors réduire l’ensemble des commandes offertes automatiquement (si vous avez utilisé l’attribut booléen `controls` ).
+
+---
+
+### `height`
+
+`height` - la hauteur de la carte, en pixels. Doit être un nombre entier sans unités.
+
+---
+
+### `width`
+
+`width` - la largeur de la carte, en pixels. Doit être un nombre entier sans unités.
+
+---
+
+### `static`
+
+`static` - un attribut "booléen". Il désactive l'interaction avec le clavier, ainsi que les fonctions de zoom et de déplacement de la 
+carte lorsqu'il est présent. Lorsqu'il n'est pas présent ou qu'il est supprimé, ces fonctions sont à nouveau activées.
 
 ---
 
@@ -89,7 +108,7 @@ La projection par défaut est `OSMTILE`.
 
 | Spécification                                                |
 |--------------------------------------------------------------|
-| [Élément MapML « map »](https://maps4html.org/MapML/spec/#the-map-element-0) |
+| [Élément MapML « map »](https://maps4html.org/MapML-Specification/spec/#the-map-element-0) |
 | [Élément HTML « map »](https://html.spec.whatwg.org/multipage/image-maps.html#the-map-element) |
 
 ---
@@ -107,7 +126,7 @@ La projection par défaut est `OSMTILE`.
 |  | Spéc. | Visualiseur | API |
 |:---------------------------------------------------------------------------------|:------: |:-----: |:---: |
 | [**Rendu des couches de base (5.1)**](https://maps4html.org/HTML-Map-Element-UseCases-Requirements/#map-viewers-capabilities-rendering) |  |  |  |
-|              <div class="requirement">Intégrer un visualiseur de cartes interactives, à l’aide du balisage HTML (5.1.1)</div>           | [complet](https://maps4html.org/MapML/spec/#the-map-element-0) | complet | [complet](https://maps4html.org/MapML/spec/#webidl-1442763376) |
+|              <div class="requirement">Intégrer un visualiseur de cartes interactives, à l’aide du balisage HTML (5.1.1)</div>           | [complet](https://maps4html.org/MapML-Specification/spec/#the-map-element-0) | complet | [complet](https://maps4html.org/MapML-Specification/spec/#webidl-1442763376) |
 |              <div class="enhancement">Gérer une carte par défaut pour une région donnée (5.1.2)</div>           | Non prévu | Non prévu | Non prévu |
 |            <div class="requirement">Afficher une carte de base sans JavaScript (5.1.5)</div>             | complet | [limité](http://maps4html.org/experiments/progressive-enhancement/) |  |
 |            <div class="requirement">Afficher le contenu d’une carte dans la langue préférée de l’utilisateur (5.1.6)</div>            | [complet](https://github.com/Maps4HTML/HTML-Map-Element-UseCases-Requirements/issues/136) | [complet](https://github.com/Maps4HTML/mapml-extension) |  |
@@ -119,7 +138,7 @@ La projection par défaut est `OSMTILE`.
 | [**Navigation des utilisateurs (vue panoramique et zoom) (5.4)**](https://maps4html.org/HTML-Map-Element-UseCases-Requirements/#map-viewers-capabilities-user-navigation) |  |  |  |
 |            <div class="requirement">Faire un zoom sur la carte indépendamment du reste de la page (5.4.1)</div>            | complet    | complet   | |
 |                            <div class="requirement">Afficher une vue panoramique de la carte (5.4.2)</div>                             | complet    | complet   | |
-|          <div class="undecided">Encapsuler ou dupliquer des pavés de données au moment d’afficher une vue panoramique du monde (5.4.4)</div>             | none    | partial| | |
+|          <div class="undecided">Encapsuler ou dupliquer des pavés de données au moment d’afficher une vue panoramique du monde (5.4.4)</div>             | aucun    | limité| | |
 | [**Custom styling (5.5)**](https://maps4html.org/HTML-Map-Element-UseCases-Requirements/#map-viewers-capabilities-custom-styling) |  |  |  |
 |          <div class="undecided">Appliquer un style personnalisé aux commandes d’une carte (5.5.2)</div>              | aucun | aucun |  |
 |          <div class="undecided">Choisir d’afficher les commandes par défaut ou non (5.5.3)</div>              | complet | complet |  |
@@ -128,5 +147,5 @@ La projection par défaut est `OSMTILE`.
 |          <div class="requirement">Déplacer la carte pour afficher un emplacement donné (6.2.5)</div>              | complet | complet |  |
 ---
 
-> - [Modifier cette page sur **Github**](https://github.com/Maps4HTML/web-map-doc/edit/main/docs/elements/mapml-viewer.md)
+> - [Modifier cette page sur **Github**](https://github.com/Maps4HTML/web-map-doc/edit/main/i18n/fr/docusaurus-plugin-content-docs/current/elements/mapml-viewer.md)
 > - [Discutez avec nous sur **Gitter**](https://gitter.im/Maps4HTML/chat)

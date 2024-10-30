@@ -14,7 +14,7 @@ maps.  Most of the extensions center on proposed new values of the `rel` attribu
 - provide links to alternate projections for a layer, via the `alternate` rel value, in conjunction with the `projection="..."` attribute. Such links are automatically followed by the polyfill when appropriate.
 - provide a URL template that is processed and converted to a URL and fetched by the polyfill, each time the map requires new content to render, such as a tile, via the `tile`, `image`, `feature` and `query` rel values, in conjunction with the `tref="..."` attribute. Such links are automatically created and followed / imported when appropriate.
 - include links to legend graphics for a layer.  Currently such links are rendered as hyperlinks, not as graphics.
-- provide links to CSS stylesheets via the `stylesheet` rel value, which are imported by the polyfill automatically.
+- provide links to CSS and pmtiles stylesheets via the `stylesheet` rel value, which are imported by the polyfill automatically.
 - provide links to layers at next native zoom level via `zoomin`, `zoomout` rel values.  Such links are automatically followed by the polyfill when appropriate.
 
 <!-- demo / example -->
@@ -41,7 +41,7 @@ defines several uses of existing and new `rel` keyword values.
 | `zoomout`    | The link `href` is followed automatically by the polyfill when the map is zoomed out by the user to a value less than the minimum value of the zoom range of the current layer.  The referenced map layer resource replaces the current map layer.  The polyfill does not represent this link as a user-visible affordance, it is followed automatically.  If the remote resource does not contain a reciprocal `zoomin` link, the map state change is one-way i.e. the layer is permanently replaced.  |
 | `legend`     | The `legend` link relation designates a link to metadata, typically an image, describing the symbology used by the current layer.  Currently, the polyfill creates a hyperlink for the label of the layer in the layer control, which opens in a new browsing context. |
 | `query`      | The `query` link relation is used in combination with the `tref="..."` attribute to establish a URL template that composes a map query URL based on user map gestures such as click or touch. These URLs are fetched and the response presented on top of the map as a popup. Such queries can return text/html or text/mapml responses. In the latter case, the response may contain more than one feature, in which case a 'paged' popup is generated, allowing the user to cycle through the features' individual metadata. |
-| `stylesheet` | The link imports a CSS stylesheet from the `href` value. |
+| `stylesheet` | The link imports a CSS or [pmtiles](../../user-guide/creating-styles) stylesheet from the `href` value. |
 
 
 ---
@@ -53,7 +53,18 @@ The `type` attribute defines the expected
 of the remote resource. Depending on the [`rel` value](#rel), the `type` may play a significant role in determining
 the polyfill behaviour.
 
-Common values of `type` include **text/html**, **text/mapml**, and **image/\***.
+Supported values of `type` and function
+
+| Value         | Description                                          	  |
+|--------------	|--------------------------------------------------------	|
+| `text/mapml`  | Use in combination with `rel=tile` or `rel=features`, where `tref` refers to a MapML formated data source, often [GeoServer](https://docs.geoserver.org/latest/en/user/extensions/mapml/index.html) or other spatial content management system.|
+| `text/mapml` | Use in combination with `rel=self`, `rel=style` and `rel="self style"`, where `href` refers to an alternate or current style of the current MapML document. Supported by [GeoServer](https://docs.geoserver.org/latest/en/user/extensions/mapml/installation.html#styles), but can be readily created in static (remote-only) MapML documents| 
+| `image/*` | Use in combination with `rel=image` and `rel=tile` to load full-viewport map images and image tiles, respectively, when `tref` refers to an image-based data source, such as any Web Map Service or Web Map Tile Service. See [Mozilla Developer Network](https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types) for a list of supported types.|
+| `application/pmtiles` | Use in combination with `rel=tile`, where `tref` refers to [pmtiles format](https://docs.protomaps.com/pmtiles/) or map resources. * | 
+| `application/pmtiles+stylesheet` | Use in combination with `rel=stylesheet`, where `href` refers to a JavaScript module structured in a specific way. * |
+| `application/vnd.mapbox-vector-tile` | Use in combination with `rel=tile`, where `tref` refers to a [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec)-format so-called "\{z}\{x}\{y}" [Web Map Tile Service](https://docs.geoserver.org/latest/en/user/extensions/vectortiles/tutorial.html) or [API](https://protomaps.com/other). * |
+
+\* see [Using mvt styles](../../user-guide/using-styles) for details on how to use these `type` values
 
 ---
 ### `title`
@@ -127,9 +138,9 @@ Projection values [defined by the polyfill](../mapml-viewer#projection) include:
 
 ```html
 <mapml-viewer  projection="OSMTILE" zoom="1" lat="0" lon="0" controls>
- <layer- label="OpenStreetMap" src="https://geogratis.gc.ca/mapml/en/osmtile/osm/" checked hidden  ></layer->
- <layer- label="TMS COG Source" checked>
-   <map-extent units="OSMTILE">
+ <map-layer label="OpenStreetMap" src="https://geogratis.gc.ca/mapml/en/osmtile/osm/" checked hidden  ></map-layer>
+ <map-layer label="TMS COG Source" checked>
+   <map-extent units="OSMTILE" checked>
        <map-input name="zoom" type="zoom"  min="1" max="12"></map-input>
        <map-input name="row" type="location" axis="row" units="tilematrix" ></map-input>
        <map-input name="col" type="location" axis="column" units="tilematrix"></map-input>
@@ -137,7 +148,7 @@ Projection values [defined by the polyfill](../mapml-viewer#projection) include:
        <map-link tms rel="tile" tref="https://s3-eu-west-1.amazonaws.com/vito-lcv/global/2019/cog-grass-colored-fraction_grass/{zoom}/{col}/{row}.png">
    </map-link>
    </map-extent>
-   </layer->
+   </map-layer>
 </mapml-viewer>
 ```
 
@@ -151,7 +162,7 @@ Projection values [defined by the polyfill](../mapml-viewer#projection) include:
 
 | Specification                                                |
 |--------------------------------------------------------------|
-| [MapML link element](https://maps4html.org/MapML/spec/#the-link-element-0) |
+| [MapML link element](https://maps4html.org/MapML-Specification/spec/#the-link-element-0) |
 | [HTML link element](https://html.spec.whatwg.org/multipage/semantics.html#the-link-element) |
 
 ---
@@ -171,7 +182,7 @@ Projection values [defined by the polyfill](../mapml-viewer#projection) include:
 | [**Vector features and overlays (5.2)**](https://maps4html.org/HTML-Map-Element-UseCases-Requirements/#map-viewers-capabilities-vectors) |  |  |  |
 |                        <div class="requirement">Display map data attribution and links (5.2.4)</div>                   | full | full |  |
 | [**User navigation (pan and zoom) (5.4)**](https://maps4html.org/HTML-Map-Element-UseCases-Requirements/#map-viewers-capabilities-user-navigation) |  |  |  |
-| <div class="discussion">Hide or show (and maybe dynamically load) vector features and labels on zoom (5.4.7)</div> | [full](https://maps4html.org/MapML/spec/#link-rel-features) | [full](https://maps4html.org/web-map-doc/docs/elements/link/#rel) |  |
+| <div class="discussion">Hide or show (and maybe dynamically load) vector features and labels on zoom (5.4.7)</div> | [full](https://maps4html.org/MapML-Specification/spec/#link-rel-features) | [full](https://maps4html.org/web-map-doc/docs/elements/link/#rel) |  |
 
 ---
 

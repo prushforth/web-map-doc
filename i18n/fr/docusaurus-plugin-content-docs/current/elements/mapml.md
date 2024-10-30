@@ -4,10 +4,10 @@ title: "<mapml->"
 slug: /elements/mapml/
 ---
 
-L’élément `<mapml->` est la racine d’un document MapML (avec une extension de fichier .mapml) et il représente une couche. Un document MapML peut être extrait comme ressource distante à partir de l’URL de l’attribut source `<layer- src="..."></layer->` :
+L’élément `<mapml->` est la racine d’un document MapML (avec une extension de fichier .mapml) et il représente une couche. Un document MapML peut être extrait comme ressource distante à partir de l’URL de l’attribut source `<map-layer src="..."></map-layer>` :
 
 ```html
-<layer- label="Ma couche" src="https://example.org/mapml/mylayer" checked></layer->
+<map-layer label="Ma couche" src="https://example.org/mapml/mylayer" checked></map-layer>
 ```
 
 Un élément `<mapml->` indique que le document se trouve dans l’espace de noms xhtml, et 
@@ -24,20 +24,15 @@ il doit contenir un élément `<map-head>`, suivi d’un élément `<map-body>`.
     <map-title>OpenStreetMap</map-title>
     <meta http-equiv="Content-Type" content="text/mapml;projection=OSMTILE"/>
     <meta charset="utf-8"/>
-    <map-link rel="license" href="https://www.openstreetmap.org/copyright" title="© OpenStreetMap contributors CC BY-SA"/>
+    <map-link rel="license" href="https://www.openstreetmap.org/copyright" title="© OpenStreetMap contributors CC BY-SA"></map-link>
   </map-head>
   <map-body>
-    <map-extent units="OSMTILE" >
+    <!-- Lorsque des attributs booléens tels que "checked" ou "hidden" sont utilisés dans un fichier mapml, ils doivent avoir une valeur de type chaîne de caractères, par exemple "checked="checked"". -->
+    <map-extent units="OSMTILE" checked="checked" hidden="hidden">
       <map-input name="z" type="zoom"  value="18" min="0" max="18"></map-input>
-      <map-input name="s" type="hidden" shard="true" list="servers"></map-input>
-      <map-datalist id="servers">
-        <map-option value="a"></map-option>
-        <map-option value="b"></map-option>
-        <map-option value="c"></map-option>
-      </map-datalist>
       <map-input name="x" type="location" units="tilematrix" axis="column" min="0"  max="262144" ></map-input>
       <map-input name="y" type="location" units="tilematrix" axis="row" min="0"  max="262144" ></map-input>
-      <map-link rel="tile" tref="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <map-link rel="tile" tref="https://tile.openstreetmap.org/{z}/{x}/{y}.png" ></map-link>
     </map-extent>
   </map-body>
 </mapml->
@@ -87,9 +82,9 @@ L’élément `<map-body>` est le deuxième enfant de l’élément `<mapml->`. 
 
 | Spécification                                                |
 |--------------------------------------------------------------|
-| [Élément MapML « mapml »](https://maps4html.org/MapML/spec/#the-mapml-element-0) |
+| [Élément MapML « mapml »](https://maps4html.org/MapML-Specification/spec/#the-mapml-element-0) |
  
 ---
 
-> - [Modifier cette page sur **Github**](https://github.com/Maps4HTML/web-map-doc/edit/main/docs/elements/mapml.md)
+> - [Modifier cette page sur **Github**](https://github.com/Maps4HTML/web-map-doc/edit/main/i18n/fr/docusaurus-plugin-content-docs/current/elements/mapml.md)
 > - [Discutez avec nous sur **Gitter**](https://gitter.im/Maps4HTML/chat)

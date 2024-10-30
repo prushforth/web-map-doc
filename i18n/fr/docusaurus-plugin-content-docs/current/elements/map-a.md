@@ -1,7 +1,7 @@
 ---
 id: map-a
 title: "<map-a>"
-slug: /other-elements/map-a/
+slug: /elements/map-a/
 ---
 
 L'élément `<map-a>` propose d'étendre la page Web afin d'inclure des liens entre les cartes et les emplacements.
@@ -74,7 +74,7 @@ C.-à-d. `<map-a href="#1, 20, 30">...</map-a>` déplacera la carte vers la lati
 Pour modifier le style d’entités liées, ciblez simplement la classe `map-a` dans votre feuille de style en cascade (CSS). Après avoir cliqué sur un lien, vous pouvez cibler la classe `map-a-visited`. Voir l’exemple ci-dessous :
 
 ```html
-<layer->
+<map-layer>
   <map-style>
     .map-a {
       stroke: red;
@@ -95,7 +95,7 @@ Pour modifier le style d’entités liées, ciblez simplement la classe `map-a` 
       </map-a>
     </map-geometry>
   </map-feature>
-</layer->
+</map-layer>
 ```
 
 ### Encapsuler un type d’entités + un fragment de lieu
@@ -188,5 +188,5 @@ Cet exemple avancé contient plusieurs éléments `<map-a>` imbriqués. Le compo
 
 ---
 
-> - [Modifier cette page sur **Github**](https://github.com/Maps4HTML/web-map-doc/edit/main/docs/elements/map-a.md)
+> - [Modifier cette page sur **Github**](https://github.com/Maps4HTML/web-map-doc/edit/main/i18n/fr/docusaurus-plugin-content-docs/current/elements/map-a.md)
 > - [Discutez avec nous sur **Gitter**](https://gitter.im/Maps4HTML/chat)

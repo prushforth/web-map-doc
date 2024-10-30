@@ -4,7 +4,7 @@ title: "<map-style>"
 slug: /elements/style/
 ---
 
-The `<map-style>` element allows map authors to embed CSS into map layers. The CSS can be used to style the geometry of the layer using [`<map-span>`](../../other-elements/span/), and by setting the class attribute to the [child elements](../geometry/#child-elements) of the geometry.
+The `<map-style>` element allows map authors to embed CSS into map layers. The CSS can be used to style the geometry of the layer using [`<map-span>`](../../elements/span/), and by setting the class attribute to the [child elements](../geometry/#child-elements) of the geometry.
 
 :::note
 
@@ -22,8 +22,8 @@ All the Demo's on the documentation pages contain a "CSS" tab which adds the CSS
 
 ```html
 <mapml-viewer projection="OSMTILE" zoom="10" lon="-75.7" lat="45.4" controls>
-  <layer- label="OpenStreetMap" src="../data/osm.mapml" checked></layer->
-  <layer- label="Polygon" checked>
+  <map-layer label="OpenStreetMap" src="../data/osm.mapml" checked></map-layer>
+  <map-layer label="Polygon" checked>
     <map-meta name="projection" content="OSMTILE"></map-meta>
     <map-feature>
       <map-featurecaption>Polygon</map-featurecaption>
@@ -37,7 +37,7 @@ All the Demo's on the documentation pages contain a "CSS" tab which adds the CSS
       <map-properties><h2>This is a Polygon</h2></map-properties>
     </map-feature>
     <map-style>.hole {stroke: #73A9AD;stroke-width: 4px;fill: none;fill-opacity: 1;}</map-style>
-  </layer->
+  </map-layer>
 </mapml-viewer>
 ```
 
@@ -47,7 +47,7 @@ All the Demo's on the documentation pages contain a "CSS" tab which adds the CSS
 
 | Specification                                                |
 |--------------------------------------------------------------|
-| [MapML style element](https://maps4html.org/MapML/spec/#styling) |
+| [MapML style element](https://maps4html.org/MapML-Specification/spec/#styling) |
 | [HTML style element](https://html.spec.whatwg.org/#the-style-element) |
 
 ---

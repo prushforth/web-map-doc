@@ -10,13 +10,13 @@ Au cours des dernières années, les images cliquables côté client ont perdu d
 
 Les éléments personnalisés de cartes Web fournissent un ensemble d’éléments de validation de principe « [personnalisés et intégrés](https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_custom_elements) » fondés sur les éléments `<map>`, `<area>` et `<img>` qui seront « ramenés » à une une image cliquable côté client dans les anciens navigateurs ou en l’absence de JavaScript (script désactivé).
 
-:::avertissement
+:::caution
 
 Il est à noter qu’étant donné que [tous les navigateurs Web récents ne prennent pas en charge les éléments intégrés personnalisés en HTML](https://caniuse.com/mdn-api_customelementregistry_builtin), il n’est pas recommandé d’utiliser cette validation de principe sur un site Web public puisque cela pourrait entraîner de la confusion chez les utilisateurs.
 
 :::
 
-:::avertissement
+:::caution
 
 Dans certains navigateurs, l’élément intégré personnalisé `<map>` n’est pas accessible aux utilisateurs de lecteur d’écran en raison d’un [bogue de Chromium](https://bugs.chromium.org/p/chromium/issues/detail?id=1208405).
 
@@ -27,8 +27,8 @@ Le balisage suivant pourrait fonctionner dans Chrome et Firefox, mais il pourrai
 ```html
 <img usemap="#mymap" src="../map1.png" width="700" height="400" alt="Map area">
 <map name="mymap" is="web-map" zoom="17" lat="45.398043" lon="-75.70683" controls>
-  <layer- id="osm" src="https://geogratis.gc.ca/mapml/osmtile/osm/" label="Open Street Map" checked></layer->
-  <layer- id="marker" label="Marker layer" src="../marker.mapml"></layer->
+  <map-layer id="osm" src="https://geogratis.gc.ca/mapml/osmtile/osm/" label="Open Street Map" checked></map-layer>
+  <map-layer id="marker" label="Marker layer" src="../marker.mapml"></map-layer>
   <area is="map-area" href="http://example.com/marker/" alt="rectangle" coords="255,145,275,190" shape="rect">
   <area is="map-area" id="donut" alt="Circle" href='http://example.com/circle/' coords="250,250,25" shape="circle">
   <area is="map-area" id="hole" coords="250,250,7" shape="circle">
@@ -37,11 +37,11 @@ Le balisage suivant pourrait fonctionner dans Chrome et Firefox, mais il pourrai
 </map>
 ```
 
-Pour expérimenter les éléments personnalisés `web-map` et `map-area`, vous devriez lier votre `<script type="module" src="web-map.js"></script>` au fichier `web-map.js` créé par le processus de génération des éléments personnalisés de cartes Web.
+Pour expérimenter les éléments personnalisés `web-map` et `map-area`, vous devriez lier votre `<script type="module" src="mapml.js"></script>` au fichier `mapml.js` créé par le processus de génération des éléments personnalisés de cartes Web / MapML.js.
 
 En théorie, si vous prenez des mesures pour fournir un balisage alternatif, la plupart des utilisateurs auront une expérience normale (progressive) avec la carte Web, tandis que ceux qui utilisent un ancien navigateur ou même Safari pourraient obtenir une expérience inverse avec l’image cliquable côté client. 
 
-Pour obtenir un exemple antérieur d’une telle carte Web, veuillez consulter cet [article de blogue sur les cartes Web progressives](https://maps4html.org/Web-Map-Custom-Element/blog/progressive-web-maps.html). Veuillez soulever un [problème](https://github.com/Maps4HTML/Web-Map-Custom-Element/issues) si vous souhaitez faire part de vos commentaires sur le fonctionnement de cet exemple.
+Pour obtenir un exemple antérieur d’une telle carte Web, veuillez consulter cet [article de blogue sur les cartes Web progressives](https://maps4html.org/MapML.js/blog/progressive-web-maps.html). Veuillez soulever un [problème](https://github.com/Maps4HTML/MapML.js/issues) si vous souhaitez faire part de vos commentaires sur le fonctionnement de cet exemple.
 
 ## Attributs 
 
