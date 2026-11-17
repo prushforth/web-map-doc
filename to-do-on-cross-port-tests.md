@@ -1,0 +1,1 @@
+- add featureindex controlslist keyword, possibly an image and description of the feature index overlay
